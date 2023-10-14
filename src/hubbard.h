@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <x86intrin.h>
 
 #include "slater_condon.h"
 

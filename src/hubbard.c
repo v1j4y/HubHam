@@ -68,6 +68,31 @@ void generateConfigurations(int norb, int nalpha, int nbeta, int currentOrbital,
     }
 }
 
+// Binary search for the position of a configuration in the list
+int findConfigurationPosition(const char **configList, const char *config, int listSize) {
+    int low = 0;
+    int high = listSize - 1;
+
+    while (low <= high) {
+        int mid = (low + high) / 2;
+        int cmp = strcmp(configList[mid], config);
+
+        if (cmp < 0) {
+            low = mid + 1;
+        } else if (cmp > 0) {
+            high = mid - 1;
+        } else {
+            return mid; // Found the configuration
+        }
+    }
+
+    return -1; // Configuration not found
+}
+
+int cmpfunc( const void *a, const void *b) {
+  return *(char*)a - *(char*)b;
+}
+
 int generateConfigurationsDriver(int norb, int nalpha, int nbeta) {
 
     unsigned long long numConfigurations = binomialCoeff(norb, nalpha) * binomialCoeff(norb, nbeta);
@@ -82,10 +107,33 @@ int generateConfigurationsDriver(int norb, int nalpha, int nbeta) {
 
     generateConfigurations(norb, nalpha, nbeta, 0, 0, 0, config, configAll, &count);
 
-    printf("All configurations: %d \n", count);
+    // Sort the configurations to enable binary search
+    qsort(configAll, count, sizeof(char *), cmpfunc);
+    //qsort(configAll, count, sizeof(char *), strcmp);
+
+    printf("All configurations: %d \n", numConfigurations);
     for (int i = 0; i < count; i++) {
         int totalElectrons = calculateTotalElectrons(configAll[i]);
         printf("%s (Total Electrons: %d)\n", configAll[i], totalElectrons);
+    }
+
+    char configin[norb + 1]; // +1 for the null-terminator
+    configin[0] = configAll[4][0];
+    configin[1] = configAll[4][1];
+    configin[2] = configAll[4][2];
+    configin[3] = configAll[4][3];
+    configin[4] = '\0';
+    printf("Enter the configuration to find: %s %s\n",configAll[4], configin);
+
+    int position = findConfigurationPosition((const char **)configAll, configin, count);
+
+    if (position != -1) {
+        printf("Configuration found at position %d\n", position);
+    } else {
+        printf("Configuration not found\n");
+    }
+
+    for (int i = 0; i < count; i++) {
         free(configAll[i]);
     }
     free(configAll);
