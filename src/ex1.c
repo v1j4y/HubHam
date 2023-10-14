@@ -14,6 +14,8 @@ static char help[] = "Standard symmetric eigenproblem corresponding to the Lapla
 
 #include <slepceps.h>
 
+#include "hubbard.h"
+
 int main(int argc,char **argv)
 {
   Mat            A;           /* problem matrix */
@@ -38,6 +40,8 @@ int main(int argc,char **argv)
   PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatSetUp(A));
+
+  printf(" Exc deg = %d\n", get_matelem(7, 25));
 
   PetscCall(MatGetOwnershipRange(A,&Istart,&Iend));
   for (i=Istart;i<Iend;i++) {

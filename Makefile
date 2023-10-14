@@ -16,9 +16,11 @@ DEP     := $(OBJ:.o=.d)
 # Preprocessor flags here
 CPPFLAGS:=  -MMD -MP -I. 
 # Compiler flags here
-CFLAGS  := -std=c99  ${SLEPC_INCLUDE} ${PETSC_CC_INCLUDES} 
-LDFLAGS := ${SLEPC_INCLUDE} ${PETSC_CC_INCLUDES} 
-LDLIBS  := ${LIB_DIR}/irpf90.a ${SLEPC_EPS_LIB}
+SLATERLIB_INCLUDES := /home/chilkuri/.local/include/
+SLATERLIB_LIB      := /home/chilkuri/.local/lib/libslater.so
+CFLAGS  := -std=c99  ${SLEPC_INCLUDE} ${PETSC_CC_INCLUDES}  ${SLATERLIB_INCLUDES}
+LDFLAGS := ${SLEPC_INCLUDE} ${PETSC_CC_INCLUDES}
+LDLIBS  := ${LIB_DIR}/irpf90.a ${SLEPC_EPS_LIB} ${SLATERLIB_LIB}
  
 .PHONY: ex1 all debug run clean test
 
