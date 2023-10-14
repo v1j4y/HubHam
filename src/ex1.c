@@ -42,6 +42,7 @@ int main(int argc,char **argv)
   PetscCall(MatSetUp(A));
 
   printf(" Exc deg = %d\n", get_matelem(7, 25));
+  generateConfigurationsDriver(4, 2, 2);
 
   PetscCall(MatGetOwnershipRange(A,&Istart,&Iend));
   for (i=Istart;i<Iend;i++) {
