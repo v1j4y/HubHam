@@ -15,6 +15,7 @@ static char help[] = "Standard symmetric eigenproblem corresponding to the Lapla
 #include <slepceps.h>
 
 #include "hubbard.h"
+#include "readgraphmllib.h"
 
 int main(int argc,char **argv)
 {
@@ -40,9 +41,6 @@ int main(int argc,char **argv)
   PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatSetUp(A));
-
-  printf(" Exc deg = %d\n", get_matelem(7, 25));
-  generateConfigurationsDriver(4, 2, 2);
 
   PetscCall(MatGetOwnershipRange(A,&Istart,&Iend));
   for (i=Istart;i<Iend;i++) {
@@ -141,5 +139,46 @@ int main(int argc,char **argv)
   PetscCall(VecDestroy(&xr));
   PetscCall(VecDestroy(&xi));
   PetscCall(SlepcFinalize());
+
+  // Assume configAlpha and configBeta are sorted lists of all possible alpha and beta configurations
+  int norb = 6;
+  int nalpha = 3;
+  int nbeta = 3;
+
+  int sizeAlpha = binomialCoeff(norb, nalpha);
+  int sizeBeta = binomialCoeff(norb, nbeta);
+
+  int* configAlpha = malloc(sizeAlpha * sizeof(int));
+  int* configBeta = malloc(sizeBeta * sizeof(int));
+
+  generateConfigurations(norb, nalpha, configAlpha, &sizeAlpha);
+  generateConfigurations(norb, nbeta, configBeta, &sizeBeta);
+
+  // Sort the lists for binary search
+  qsort(configAlpha, sizeAlpha, sizeof(int), compare);
+  qsort(configBeta, sizeBeta, sizeof(int), compare);
+
+  // Find the positions of a list of specific configurations
+  int alphaConfigs[] = {0b000111, 0b001110};  // Example alpha configurations
+  int betaConfigs[] = {0b010011, 0b001101};   // Example beta configurations
+
+  int sizeAlphaConfigs = sizeof(alphaConfigs) / sizeof(alphaConfigs[0]);
+  int sizeBetaConfigs = sizeof(betaConfigs) / sizeof(betaConfigs[0]);
+
+  int* posAlpha = malloc(sizeAlphaConfigs * sizeof(int));
+  int* posBeta = malloc(sizeBetaConfigs * sizeof(int));
+
+  findPositions(configAlpha, sizeAlpha, alphaConfigs, sizeAlphaConfigs, posAlpha);
+  findPositions(configBeta, sizeBeta, betaConfigs, sizeBetaConfigs, posBeta);
+
+  printf("Positions of alpha configurations:\n");
+  printPositions(posAlpha, sizeAlphaConfigs);
+
+  printf("\nPositions of beta configurations:\n");
+  printPositions(posBeta, sizeBetaConfigs);
+
+  free(configAlpha);
+  free(configBeta);
+
   return 0;
 }

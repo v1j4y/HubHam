@@ -108,7 +108,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
-am__objects_1 = src/ex1-ex1.$(OBJEXT) src/ex1-hubbard.$(OBJEXT)
+am__objects_1 = src/ex1-ex1.$(OBJEXT) src/ex1-hubbard.$(OBJEXT) \
+	src/ex1-readgraphmllib.$(OBJEXT)
 am_ex1_OBJECTS = $(am__objects_1)
 ex1_OBJECTS = $(am_ex1_OBJECTS)
 ex1_LDADD = $(LDADD)
@@ -135,7 +136,8 @@ DEFAULT_INCLUDES = -I.
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = src/$(DEPDIR)/ex1-ex1.Po \
-	src/$(DEPDIR)/ex1-hubbard.Po
+	src/$(DEPDIR)/ex1-hubbard.Po \
+	src/$(DEPDIR)/ex1-readgraphmllib.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -217,7 +219,7 @@ AUTOMAKE = ${SHELL} /home/chilkuri/Documents/codes/c_codes/hubbard_slepc/missing
 AWK = mawk
 CC = mpicc
 CCDEPMODE = depmode=gcc3
-CFLAGS = -I/home/chilkuri/.local/include -I/home/chilkuri/.local/include -I/home/chilkuri/.local/include
+CFLAGS = -I/home/chilkuri/.local/include -I/home/chilkuri/.local/include -I/home/chilkuri/.local/include -I/usr/include/igraph
 CPP = mpicc -E
 CPPFLAGS = 
 CYGPATH_W = echo
@@ -242,7 +244,7 @@ INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 LD = /usr/bin/ld -m elf_x86_64
-LDFLAGS = -L/home/chilkuri/.local/lib -lslater -L/home/chilkuri/.local/lib -lpetsc -L/home/chilkuri/.local/lib -lslepc -lpetsc -lm -ldl
+LDFLAGS = -L/home/chilkuri/.local/lib -lpetsc -lslepc -lpetsc -lslater -ligraph -lm 
 LIBOBJS = 
 LIBS = 
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
@@ -336,8 +338,8 @@ ACLOCAL_AMFLAGS = -I m4 --install
 VERSION_MAJOR = @VERSION_MAJOR@
 VERSION_MINOR = @VERSION_MINOR@
 VERSION_PATCH = @VERSION_PATCH@
-src_main_c = src/ex1.c src/hubbard.c
-src_main_h = src/hubbard.h
+src_main_c = src/ex1.c src/hubbard.c src/readgraphmllib.c
+src_main_h = src/hubbard.h src/readgraphmllib.h
 ex1_SOURCES = $(src_main_c)
 ex1_CPPFLAGS = $(AM_CPPFLAGS)
 ex1_CFLAGS = $(AM_CFLAGS) "-I${top_srcdir}/include" \
@@ -455,6 +457,8 @@ src/ex1-ex1.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/ex1-hubbard.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/ex1-readgraphmllib.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 
 ex1$(EXEEXT): $(ex1_OBJECTS) $(ex1_DEPENDENCIES) $(EXTRA_ex1_DEPENDENCIES) 
 	@rm -f ex1$(EXEEXT)
@@ -469,6 +473,7 @@ distclean-compile:
 
 include src/$(DEPDIR)/ex1-ex1.Po # am--include-marker
 include src/$(DEPDIR)/ex1-hubbard.Po # am--include-marker
+include src/$(DEPDIR)/ex1-readgraphmllib.Po # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -527,6 +532,20 @@ src/ex1-hubbard.obj: src/hubbard.c
 #	$(AM_V_CC)source='src/hubbard.c' object='src/ex1-hubbard.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ex1_CPPFLAGS) $(CPPFLAGS) $(ex1_CFLAGS) $(CFLAGS) -c -o src/ex1-hubbard.obj `if test -f 'src/hubbard.c'; then $(CYGPATH_W) 'src/hubbard.c'; else $(CYGPATH_W) '$(srcdir)/src/hubbard.c'; fi`
+
+src/ex1-readgraphmllib.o: src/readgraphmllib.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ex1_CPPFLAGS) $(CPPFLAGS) $(ex1_CFLAGS) $(CFLAGS) -MT src/ex1-readgraphmllib.o -MD -MP -MF src/$(DEPDIR)/ex1-readgraphmllib.Tpo -c -o src/ex1-readgraphmllib.o `test -f 'src/readgraphmllib.c' || echo '$(srcdir)/'`src/readgraphmllib.c
+	$(AM_V_at)$(am__mv) src/$(DEPDIR)/ex1-readgraphmllib.Tpo src/$(DEPDIR)/ex1-readgraphmllib.Po
+#	$(AM_V_CC)source='src/readgraphmllib.c' object='src/ex1-readgraphmllib.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ex1_CPPFLAGS) $(CPPFLAGS) $(ex1_CFLAGS) $(CFLAGS) -c -o src/ex1-readgraphmllib.o `test -f 'src/readgraphmllib.c' || echo '$(srcdir)/'`src/readgraphmllib.c
+
+src/ex1-readgraphmllib.obj: src/readgraphmllib.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ex1_CPPFLAGS) $(CPPFLAGS) $(ex1_CFLAGS) $(CFLAGS) -MT src/ex1-readgraphmllib.obj -MD -MP -MF src/$(DEPDIR)/ex1-readgraphmllib.Tpo -c -o src/ex1-readgraphmllib.obj `if test -f 'src/readgraphmllib.c'; then $(CYGPATH_W) 'src/readgraphmllib.c'; else $(CYGPATH_W) '$(srcdir)/src/readgraphmllib.c'; fi`
+	$(AM_V_at)$(am__mv) src/$(DEPDIR)/ex1-readgraphmllib.Tpo src/$(DEPDIR)/ex1-readgraphmllib.Po
+#	$(AM_V_CC)source='src/readgraphmllib.c' object='src/ex1-readgraphmllib.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ex1_CPPFLAGS) $(CPPFLAGS) $(ex1_CFLAGS) $(CFLAGS) -c -o src/ex1-readgraphmllib.obj `if test -f 'src/readgraphmllib.c'; then $(CYGPATH_W) 'src/readgraphmllib.c'; else $(CYGPATH_W) '$(srcdir)/src/readgraphmllib.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -809,6 +828,7 @@ distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 		-rm -f src/$(DEPDIR)/ex1-ex1.Po
 	-rm -f src/$(DEPDIR)/ex1-hubbard.Po
+	-rm -f src/$(DEPDIR)/ex1-readgraphmllib.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-libtool distclean-tags
@@ -858,6 +878,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -rf $(top_srcdir)/autom4te.cache
 		-rm -f src/$(DEPDIR)/ex1-ex1.Po
 	-rm -f src/$(DEPDIR)/ex1-hubbard.Po
+	-rm -f src/$(DEPDIR)/ex1-readgraphmllib.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
