@@ -177,6 +177,46 @@ int main(int argc,char **argv)
   printf("\nPositions of beta configurations:\n");
   printPositions(posBeta, sizeBetaConfigs);
 
+  const char* graphmlFileName = "/tmp/graphm3.graphml";
+  FILE* graphmlFile = fopen(graphmlFileName, "r");
+
+  if (graphmlFile == NULL) {
+    fprintf(stderr, "Error opening the file.\n");
+    return 1;  // Return an error code or use another error handling method.
+  }
+
+  igraph_t graph;
+  igraph_empty(&graph, 0, IGRAPH_DIRECTED);
+
+  if (readGraphMLFile(graphmlFile, &graph)) {
+    // Successfully read the graph, now you can work with 'graph'.
+    igraph_integer_t num_vertices = igraph_vcount(&graph);
+    printf("Number of vertices: %ld\n", (long)num_vertices);
+  }
+
+  // Example alpha configuration
+  size_t alphaConfig = 0b000111;
+
+  // Generate all possible alpha determinants
+  igraph_vector_t alphaDeterminants;
+  igraph_vector_init(&alphaDeterminants, 0);
+  generateAlphaDeterminants(&graph, alphaConfig, &alphaDeterminants);
+
+  // Print the generated alpha determinants
+  int *int_alphaDeterminants = igraphVectorToIntArray(&alphaDeterminants);
+  for (int i = 0; i < igraph_vector_size(&alphaDeterminants); ++i) {
+    printf("%d - %f\n", i, VECTOR(alphaDeterminants)[i]);
+    printBits(int_alphaDeterminants[i], norb);
+  }
+
+  igraph_vector_destroy(&alphaDeterminants);
+
+  // Don't forget to destroy the graph when you're done.
+  igraph_destroy(&graph);
+
+  // Close the file when you're done with it.
+  fclose(graphmlFile);
+
   free(configAlpha);
   free(configBeta);
 

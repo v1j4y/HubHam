@@ -1,4 +1,5 @@
 #include "hubbard.h"
+#include "readgraphmllib.h"
 
 int get_matelem(size_t deti, size_t detj) {
   exc_number_t exij;
@@ -55,3 +56,50 @@ void printPositions(int* positions, int size) {
     }
 }
 
+// Function to generate all possible alpha determinants
+void generateAlphaDeterminants(const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) {
+    // Get the number of orbitals
+    int norb = igraph_vcount(graph);
+
+    // Loop over each orbital
+    for (int i = 0; i < norb; ++i) {
+        // Check if the orbital is occupied
+        if ((alphaConfig >> i) & 1) {
+            // Get the connected vertices
+            igraph_vector_t orbital_id_allowed;
+            igraph_vector_init(&orbital_id_allowed, 0);
+            getConnectedVertices(graph, i, &orbital_id_allowed);
+
+            // Loop over each connected vertex
+            for (int j = 0; j < igraph_vector_size(&orbital_id_allowed); ++j) {
+                int orbital_id = VECTOR(orbital_id_allowed)[j];
+
+                // Check if the connected vertex is unoccupied
+                if (!((alphaConfig >> orbital_id) & 1)) {
+                    // Create a new alpha determinant by moving the electron
+                    size_t newAlphaConfig = alphaConfig ^ ((1 << i) | (1 << orbital_id));
+
+                    // Add the new alpha determinant to the list
+                    igraph_vector_push_back(alphaDeterminants, newAlphaConfig);
+                }
+            }
+
+            igraph_vector_destroy(&orbital_id_allowed);
+        }
+    }
+}
+
+int* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) {
+    int* int_array = (int*)malloc(igraph_vector_size(igraph_vector) * sizeof(int));
+
+    if (int_array == NULL) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        return NULL;
+    }
+
+    for (igraph_integer_t i = 0; i < igraph_vector_size(igraph_vector); i++) {
+        int_array[i] = (int)VECTOR(*igraph_vector)[i];
+    }
+
+    return int_array;
+}
