@@ -219,7 +219,7 @@ AUTOMAKE = ${SHELL} /home/chilkuri/Documents/codes/c_codes/hubbard_slepc/missing
 AWK = mawk
 CC = mpicc
 CCDEPMODE = depmode=gcc3
-CFLAGS = -I/home/chilkuri/.local/include -I/home/chilkuri/.local/include -I/home/chilkuri/.local/include -I/usr/include/igraph
+CFLAGS = -I/home/chilkuri/Documents/codes/c_codes/uthash/include -I/home/chilkuri/.local/include -I/home/chilkuri/.local/include -I/home/chilkuri/.local/include -I/usr/include/igraph
 CPP = mpicc -E
 CPPFLAGS = 
 CYGPATH_W = echo

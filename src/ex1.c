@@ -158,6 +158,25 @@ int main(int argc,char **argv)
   qsort(configAlpha, sizeAlpha, sizeof(int), compare);
   qsort(configBeta, sizeBeta, sizeof(int), compare);
 
+  // Create an array of CombinedID structs
+  // struct CombinedID* combinedIDs = malloc(sizeAlpha * sizeBeta * sizeof(struct CombinedID));
+
+  // Create hash table to store the list
+  struct IDMap* idMap = NULL;
+
+  // Store the combined IDs of all alpha and beta configurations in the array
+  long long int globalID = 0;
+  for (int i = 0; i < sizeAlpha; ++i) {
+    for (int j = 0; j < sizeBeta; ++j) {
+      struct CombinedID combinedID = {configAlpha[i], configBeta[j]};
+      addID(&idMap, combinedID, globalID++);
+    }
+  }
+
+  // Now you can access the combined IDs from the array
+  // For example, print the first combined ID
+  //printf("First combined ID: Alpha ID = %zu, Beta ID = %zu ID=%zu\n", combinedIDs[7].alphaID, combinedIDs[7].betaID);
+
   // Find the positions of a list of specific configurations
   int alphaConfigs[] = {0b000111, 0b001110};  // Example alpha configurations
   int betaConfigs[] = {0b010011, 0b001101};   // Example beta configurations
@@ -216,6 +235,17 @@ int main(int argc,char **argv)
 
   // Close the file when you're done with it.
   fclose(graphmlFile);
+
+  // Now you can find the global ID in the hash table given an alpha and beta ID
+  // For example:
+  size_t alphaID = configAlpha[0];
+  size_t betaID = configBeta[1];
+
+  unsigned long long foundGlobalID = findGlobalID(&idMap, alphaID, betaID);
+
+  if (foundGlobalID != 0) {
+    printf("Global ID: %llu\n", foundGlobalID);
+  }
 
   free(configAlpha);
   free(configBeta);

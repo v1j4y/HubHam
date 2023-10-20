@@ -11,6 +11,27 @@ int get_matelem(size_t deti, size_t detj) {
   return exij;
 }
 
+// Function to add a pair of IDs to the hash table
+void addID(struct IDMap** idMap, struct CombinedID combinedID, size_t ID) {
+    struct IDMap* s;
+
+    s = malloc(sizeof(struct IDMap));
+    s->combinedID = combinedID;
+    s->ID= ID;
+
+    HASH_ADD(hh, *idMap, combinedID, sizeof(struct CombinedID), s);
+}
+
+// Function to find a global ID in the hash table given an alpha and beta ID
+unsigned long long findGlobalID(struct IDMap** idMap, size_t alphaID, size_t betaID) {
+    struct CombinedID combinedID = {alphaID, betaID};
+    struct IDMap* s;
+
+    HASH_FIND(hh, *idMap, &combinedID, sizeof(struct CombinedID), s);
+
+    return s != NULL ? s->ID : 0;  // Return 0 if not found
+}
+
 // Function to calculate binomial coefficient using lgamma function
 long long binomialCoeff(int n, int k) {
     return round(exp(lgamma(n+1) - lgamma(k+1) - lgamma(n-k+1)));
@@ -125,4 +146,20 @@ int getPhase(size_t alphaConfig, size_t newAlphaConfig, int h, int p) {
     int phase = ((unsigned int) 1) & nperm;
     //printf(" %llu %llu (%d, %d) nperm = %d phase=%d \n",d1[0], d2[0], i,orbital_id,nperm,phase);
     return phase;
+}
+
+// Function to generate all possible alpha determinants for a list of given alpha configurations
+void generateAllAlphaDeterminants(int *configAlpha, int sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, int numConfigs, igraph_vector_t* allAlphaDeterminants) {
+    for (int i = 0; i < numConfigs; ++i) {
+        igraph_vector_t alphaDeterminants;
+        igraph_vector_init(&alphaDeterminants, 0);
+
+        generateAlphaDeterminants(configAlpha, sizeAlpha, graph, alphaConfigs[i], &alphaDeterminants);
+
+        for (int j = 0; j < igraph_vector_size(&alphaDeterminants); ++j) {
+            igraph_vector_push_back(allAlphaDeterminants, VECTOR(alphaDeterminants)[j]);
+        }
+
+        igraph_vector_destroy(&alphaDeterminants);
+    }
 }
