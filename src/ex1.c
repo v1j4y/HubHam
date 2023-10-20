@@ -195,18 +195,18 @@ int main(int argc,char **argv)
   }
 
   // Example alpha configuration
-  size_t alphaConfig = 0b000111;
+  size_t alphaConfig = 0b001101;
 
   // Generate all possible alpha determinants
   igraph_vector_t alphaDeterminants;
   igraph_vector_init(&alphaDeterminants, 0);
-  generateAlphaDeterminants(&graph, alphaConfig, &alphaDeterminants);
+  generateAlphaDeterminants(configAlpha, sizeAlpha, &graph, alphaConfig, &alphaDeterminants);
 
   // Print the generated alpha determinants
   int *int_alphaDeterminants = igraphVectorToIntArray(&alphaDeterminants);
   for (int i = 0; i < igraph_vector_size(&alphaDeterminants); ++i) {
     printf("%d - %f\n", i, VECTOR(alphaDeterminants)[i]);
-    printBits(int_alphaDeterminants[i], norb);
+    printBits(configAlpha[int_alphaDeterminants[i]], norb);
   }
 
   igraph_vector_destroy(&alphaDeterminants);

@@ -26,6 +26,6 @@ long long binomialCoeff(int n, int k) ;
 void printPositions(int* positions, int size) ;
 
 // Function to generate all possible alpha determinants
-void generateAlphaDeterminants(const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) ;
+void generateAlphaDeterminants(int* configAlpha, int sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) ;
 
 int* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) ;

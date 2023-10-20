@@ -57,7 +57,7 @@ void printPositions(int* positions, int size) {
 }
 
 // Function to generate all possible alpha determinants
-void generateAlphaDeterminants(const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) {
+void generateAlphaDeterminants(int* configAlpha, int sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) {
     // Get the number of orbitals
     int norb = igraph_vcount(graph);
 
@@ -79,8 +79,12 @@ void generateAlphaDeterminants(const igraph_t* graph, size_t alphaConfig, igraph
                     // Create a new alpha determinant by moving the electron
                     size_t newAlphaConfig = alphaConfig ^ ((1 << i) | (1 << orbital_id));
 
-                    // Add the new alpha determinant to the list
-                    igraph_vector_push_back(alphaDeterminants, newAlphaConfig);
+                    // Find the position of the new alpha determinant in the list and add it to alphaDeterminants
+                    int pos;
+                    findPositions(configAlpha, sizeAlpha, &newAlphaConfig, 1, &pos);
+
+                    // Add the position of the new alpha determinant to the list
+                    igraph_vector_push_back(alphaDeterminants, pos);
                 }
             }
 
@@ -102,4 +106,23 @@ int* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) {
     }
 
     return int_array;
+}
+
+int getPhase(size_t alphaConfig, size_t newAlphaConfig, int h, int p) {
+
+    // Phase
+    unsigned int nperm;
+
+    determinant_t d1[1];
+    determinant_t d2[1];
+    d1[0] = alphaConfig;
+    d2[0] = newAlphaConfig;
+    orbital_t h1[1];
+    orbital_t p2[1];
+    h1[0] = h;
+    p2[0] = p;
+    nperm = get_nperm_single((unsigned int) 1, d1, d2, h1, p2);
+    int phase = ((unsigned int) 1) & nperm;
+    //printf(" %llu %llu (%d, %d) nperm = %d phase=%d \n",d1[0], d2[0], i,orbital_id,nperm,phase);
+    return phase;
 }
