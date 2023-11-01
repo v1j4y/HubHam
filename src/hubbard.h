@@ -3,52 +3,35 @@
 #include <string.h>
 #include <math.h>
 #include <x86intrin.h>
-#include "uthash.h"
 
 #include <igraph.h>
 
 #include "slater_condon.h"
 
-// Structure for the combined ID
-struct CombinedID {
-    size_t alphaID;
-    size_t betaID;
-};
-
-// Structure for the hash table
-struct IDMap {
-    struct CombinedID combinedID;  // key
-    unsigned long long ID;
-    UT_hash_handle hh;  // makes this structure hashable
-};
-
-// Function to add a pair of IDs to the hash table
-void addID(struct IDMap** idMap, struct CombinedID combinedID, size_t globalID) ;
-
 // Function to find a global ID in the hash table given an alpha and beta ID
-unsigned long long findGlobalID(struct IDMap** idMap, size_t alphaID, size_t betaID) ;
+size_t findGlobalID(size_t alphaID, size_t betaID, size_t nalpha) ;
 
-int get_matelem(size_t deti, size_t detj) ;
+size_t get_matelem(size_t deti, size_t detj) ;
 
-void printBits(int num, int len) ;
+void printBits(size_t num, size_t len) ;
 
-void generateConfigurations(int norb, int nelec, int* configAll, int* size) ;
+void generateConfigurations(size_t norb, size_t nelec, size_t* configAll, size_t* size) ;
 
 // Function to find the positions of a list of configurations in a sorted list
-void findPositions(int* configList, int sizeList, int* configs, int sizeConfigs, int* positions) ;
+void findPositions(size_t* configList, size_t sizeList, size_t* configs, size_t sizeConfigs, size_t* positions) ;
 
 // Function to compare two configurations for qsort and bsearch
 int compare(const void* a, const void* b) ;
 
 // Function to calculate binomial coefficient using lgamma function
-long long binomialCoeff(int n, int k) ;
+long long binomialCoeff(size_t n, size_t k) ;
 
-void printPositions(int* positions, int size) ;
+void printPositions(size_t* positions, size_t size) ;
 
 // Function to generate all possible alpha determinants
-void generateAlphaDeterminants(int* configAlpha, int sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) ;
+void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) ;
 
 // Function to generate all possible alpha determinants given a list of alpha determinants
-void generateAllAlphaDeterminants(int *configAlpha, int sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, int numConfigs, igraph_vector_t* allAlphaDeterminants) ;
+void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, size_t numConfigs, igraph_vector_t* allAlphaDeterminants) ;
 
-int* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) ;
+size_t* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) ;

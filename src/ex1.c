@@ -131,61 +131,33 @@ int main(int argc,char **argv)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
   }
 
-  /*
-     Free work space
-  */
-  PetscCall(EPSDestroy(&eps));
-  PetscCall(MatDestroy(&A));
-  PetscCall(VecDestroy(&xr));
-  PetscCall(VecDestroy(&xi));
-  PetscCall(SlepcFinalize());
-
   // Assume configAlpha and configBeta are sorted lists of all possible alpha and beta configurations
-  int norb = 6;
-  int nalpha = 3;
-  int nbeta = 3;
+  size_t norb = 6;
+  size_t nalpha = 3;
+  size_t nbeta = 3;
 
-  int sizeAlpha = binomialCoeff(norb, nalpha);
-  int sizeBeta = binomialCoeff(norb, nbeta);
+  size_t sizeAlpha = binomialCoeff(norb, nalpha);
+  size_t sizeBeta = binomialCoeff(norb, nbeta);
 
-  int* configAlpha = malloc(sizeAlpha * sizeof(int));
-  int* configBeta = malloc(sizeBeta * sizeof(int));
+  size_t* configAlpha = malloc(sizeAlpha * sizeof(size_t));
+  size_t* configBeta = malloc(sizeBeta * sizeof(size_t));
 
   generateConfigurations(norb, nalpha, configAlpha, &sizeAlpha);
   generateConfigurations(norb, nbeta, configBeta, &sizeBeta);
 
   // Sort the lists for binary search
-  qsort(configAlpha, sizeAlpha, sizeof(int), compare);
-  qsort(configBeta, sizeBeta, sizeof(int), compare);
-
-  // Create an array of CombinedID structs
-  // struct CombinedID* combinedIDs = malloc(sizeAlpha * sizeBeta * sizeof(struct CombinedID));
-
-  // Create hash table to store the list
-  struct IDMap* idMap = NULL;
-
-  // Store the combined IDs of all alpha and beta configurations in the array
-  long long int globalID = 0;
-  for (int i = 0; i < sizeAlpha; ++i) {
-    for (int j = 0; j < sizeBeta; ++j) {
-      struct CombinedID combinedID = {configAlpha[i], configBeta[j]};
-      addID(&idMap, combinedID, globalID++);
-    }
-  }
-
-  // Now you can access the combined IDs from the array
-  // For example, print the first combined ID
-  //printf("First combined ID: Alpha ID = %zu, Beta ID = %zu ID=%zu\n", combinedIDs[7].alphaID, combinedIDs[7].betaID);
+  qsort(configAlpha, sizeAlpha, sizeof(size_t), compare);
+  qsort(configBeta, sizeBeta, sizeof(size_t), compare);
 
   // Find the positions of a list of specific configurations
-  int alphaConfigs[] = {0b000111, 0b001110};  // Example alpha configurations
-  int betaConfigs[] = {0b010011, 0b001101};   // Example beta configurations
+  size_t alphaConfigs[] = {0b000111, 0b001110};  // Example alpha configurations
+  size_t betaConfigs[] = {0b010011, 0b001101};   // Example beta configurations
 
-  int sizeAlphaConfigs = sizeof(alphaConfigs) / sizeof(alphaConfigs[0]);
-  int sizeBetaConfigs = sizeof(betaConfigs) / sizeof(betaConfigs[0]);
+  size_t sizeAlphaConfigs = sizeof(alphaConfigs) / sizeof(alphaConfigs[0]);
+  size_t sizeBetaConfigs = sizeof(betaConfigs) / sizeof(betaConfigs[0]);
 
-  int* posAlpha = malloc(sizeAlphaConfigs * sizeof(int));
-  int* posBeta = malloc(sizeBetaConfigs * sizeof(int));
+  size_t* posAlpha = malloc(sizeAlphaConfigs * sizeof(size_t));
+  size_t* posBeta = malloc(sizeBetaConfigs * sizeof(size_t));
 
   findPositions(configAlpha, sizeAlpha, alphaConfigs, sizeAlphaConfigs, posAlpha);
   findPositions(configBeta, sizeBeta, betaConfigs, sizeBetaConfigs, posBeta);
@@ -196,7 +168,7 @@ int main(int argc,char **argv)
   printf("\nPositions of beta configurations:\n");
   printPositions(posBeta, sizeBetaConfigs);
 
-  const char* graphmlFileName = "/tmp/graphm3.graphml";
+  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/graphm3.graphml";
   FILE* graphmlFile = fopen(graphmlFileName, "r");
 
   if (graphmlFile == NULL) {
@@ -215,17 +187,20 @@ int main(int argc,char **argv)
 
   // Example alpha configuration
   size_t alphaConfig = 0b001101;
+  size_t betaConfig  = 0b010101;
 
   // Generate all possible alpha determinants
   igraph_vector_t alphaDeterminants;
   igraph_vector_init(&alphaDeterminants, 0);
-  generateAlphaDeterminants(configAlpha, sizeAlpha, &graph, alphaConfig, &alphaDeterminants);
+  generateDeterminants(configAlpha, sizeAlpha, &graph, alphaConfig, &alphaDeterminants);
 
   // Print the generated alpha determinants
-  int *int_alphaDeterminants = igraphVectorToIntArray(&alphaDeterminants);
-  for (int i = 0; i < igraph_vector_size(&alphaDeterminants); ++i) {
-    printf("%d - %f\n", i, VECTOR(alphaDeterminants)[i]);
+  printf("\nNumber of generated alpha determinants:%ld\n",igraph_vector_size(&alphaDeterminants));
+  size_t *int_alphaDeterminants = igraphVectorToIntArray(&alphaDeterminants);
+  for (size_t i = 0; i < igraph_vector_size(&alphaDeterminants); ++i) {
     printBits(configAlpha[int_alphaDeterminants[i]], norb);
+    unsigned long long foundGlobalID = findGlobalID(configAlpha[int_alphaDeterminants[i]], betaConfig, sizeAlpha);
+    printf("%ld - %f (id = %llu)\n", i, VECTOR(alphaDeterminants)[i], foundGlobalID);
   }
 
   igraph_vector_destroy(&alphaDeterminants);
@@ -241,7 +216,7 @@ int main(int argc,char **argv)
   size_t alphaID = configAlpha[0];
   size_t betaID = configBeta[1];
 
-  unsigned long long foundGlobalID = findGlobalID(&idMap, alphaID, betaID);
+  unsigned long long foundGlobalID = findGlobalID(alphaID, betaID, sizeAlpha);
 
   if (foundGlobalID != 0) {
     printf("Global ID: %llu\n", foundGlobalID);
@@ -250,5 +225,13 @@ int main(int argc,char **argv)
   free(configAlpha);
   free(configBeta);
 
+  /*
+     Free work space
+  */
+  PetscCall(EPSDestroy(&eps));
+  PetscCall(MatDestroy(&A));
+  PetscCall(VecDestroy(&xr));
+  PetscCall(VecDestroy(&xi));
+  PetscCall(SlepcFinalize());
   return 0;
 }

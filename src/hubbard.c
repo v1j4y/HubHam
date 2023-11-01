@@ -1,7 +1,7 @@
 #include "hubbard.h"
 #include "readgraphmllib.h"
 
-int get_matelem(size_t deti, size_t detj) {
+size_t get_matelem(size_t deti, size_t detj) {
   exc_number_t exij;
   determinant_t d1[1];
   determinant_t d2[1];
@@ -11,43 +11,28 @@ int get_matelem(size_t deti, size_t detj) {
   return exij;
 }
 
-// Function to add a pair of IDs to the hash table
-void addID(struct IDMap** idMap, struct CombinedID combinedID, size_t ID) {
-    struct IDMap* s;
-
-    s = malloc(sizeof(struct IDMap));
-    s->combinedID = combinedID;
-    s->ID= ID;
-
-    HASH_ADD(hh, *idMap, combinedID, sizeof(struct CombinedID), s);
-}
-
 // Function to find a global ID in the hash table given an alpha and beta ID
-unsigned long long findGlobalID(struct IDMap** idMap, size_t alphaID, size_t betaID) {
-    struct CombinedID combinedID = {alphaID, betaID};
-    struct IDMap* s;
-
-    HASH_FIND(hh, *idMap, &combinedID, sizeof(struct CombinedID), s);
-
-    return s != NULL ? s->ID : 0;  // Return 0 if not found
+size_t findGlobalID(size_t alphaID, size_t betaID, size_t nalpha) {
+    size_t id = (alphaID-1)*nalpha + betaID;
+    return id;
 }
 
 // Function to calculate binomial coefficient using lgamma function
-long long binomialCoeff(int n, int k) {
+long long binomialCoeff(size_t n, size_t k) {
     return round(exp(lgamma(n+1) - lgamma(k+1) - lgamma(n-k+1)));
 }
 
-void printBits(int num, int len) {
+void printBits(size_t num, size_t len) {
     for (int bit = len - 1; bit >= 0; --bit) {
-        printf("%d", (num >> bit) & 1);
+        printf("%ld", (num >> bit) & 1);
     }
     printf("\n");
 }
 
-void generateConfigurations(int norb, int nelec, int* configAll, int* size) {
+void generateConfigurations(size_t norb, size_t nelec, size_t* configAll, size_t* size) {
     *size = 0;
 
-    for (int i = 0; i < (1 << norb); ++i) {
+    for (size_t i = 0; i < (1 << norb); ++i) {
         if (__builtin_popcount(i) == nelec) {
             configAll[(*size)++] = i;
         }
@@ -56,13 +41,13 @@ void generateConfigurations(int norb, int nelec, int* configAll, int* size) {
 
 // Function to compare two configurations for qsort and bsearch
 int compare(const void* a, const void* b) {
-    return (*(int*)a - *(int*)b);
+    return (*(size_t*)a - *(size_t*)b);
 }
 
 // Function to find the positions of a list of configurations in a sorted list
-void findPositions(int* configList, int sizeList, int* configs, int sizeConfigs, int* positions) {
-    for (int i = 0; i < sizeConfigs; ++i) {
-        int* item = (int*) bsearch(&configs[i], configList, sizeList, sizeof(int), compare);
+void findPositions(size_t* configList, size_t sizeList, size_t* configs, size_t sizeConfigs, size_t* positions) {
+    for (size_t i = 0; i < sizeConfigs; ++i) {
+        size_t* item = (size_t*) bsearch(&configs[i], configList, sizeList, sizeof(size_t), compare);
         if (item != NULL) {
             positions[i] = item - configList;
         } else {
@@ -71,19 +56,19 @@ void findPositions(int* configList, int sizeList, int* configs, int sizeConfigs,
     }
 }
 
-void printPositions(int* positions, int size) {
-    for (int i = 0; i < size; ++i) {
-        printf("Position: %d\n", positions[i]);
+void printPositions(size_t* positions, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        printf("Position: %ld\n", positions[i]);
     }
 }
 
 // Function to generate all possible alpha determinants
-void generateAlphaDeterminants(int* configAlpha, int sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) {
+void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) {
     // Get the number of orbitals
-    int norb = igraph_vcount(graph);
+    size_t norb = igraph_vcount(graph);
 
     // Loop over each orbital
-    for (int i = 0; i < norb; ++i) {
+    for (size_t i = 0; i < norb; ++i) {
         // Check if the orbital is occupied
         if ((alphaConfig >> i) & 1) {
             // Get the connected vertices
@@ -92,8 +77,8 @@ void generateAlphaDeterminants(int* configAlpha, int sizeAlpha, const igraph_t* 
             getConnectedVertices(graph, i, &orbital_id_allowed);
 
             // Loop over each connected vertex
-            for (int j = 0; j < igraph_vector_size(&orbital_id_allowed); ++j) {
-                int orbital_id = VECTOR(orbital_id_allowed)[j];
+            for (size_t j = 0; j < igraph_vector_size(&orbital_id_allowed); ++j) {
+                size_t orbital_id = VECTOR(orbital_id_allowed)[j];
 
                 // Check if the connected vertex is unoccupied
                 if (!((alphaConfig >> orbital_id) & 1)) {
@@ -101,7 +86,7 @@ void generateAlphaDeterminants(int* configAlpha, int sizeAlpha, const igraph_t* 
                     size_t newAlphaConfig = alphaConfig ^ ((1 << i) | (1 << orbital_id));
 
                     // Find the position of the new alpha determinant in the list and add it to alphaDeterminants
-                    int pos;
+                    size_t pos;
                     findPositions(configAlpha, sizeAlpha, &newAlphaConfig, 1, &pos);
 
                     // Add the position of the new alpha determinant to the list
@@ -114,8 +99,8 @@ void generateAlphaDeterminants(int* configAlpha, int sizeAlpha, const igraph_t* 
     }
 }
 
-int* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) {
-    int* int_array = (int*)malloc(igraph_vector_size(igraph_vector) * sizeof(int));
+size_t* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) {
+    size_t* int_array = (size_t*)malloc(igraph_vector_size(igraph_vector) * sizeof(size_t));
 
     if (int_array == NULL) {
         fprintf(stderr, "Memory allocation failed.\n");
@@ -123,16 +108,16 @@ int* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) {
     }
 
     for (igraph_integer_t i = 0; i < igraph_vector_size(igraph_vector); i++) {
-        int_array[i] = (int)VECTOR(*igraph_vector)[i];
+        int_array[i] = (size_t)VECTOR(*igraph_vector)[i];
     }
 
     return int_array;
 }
 
-int getPhase(size_t alphaConfig, size_t newAlphaConfig, int h, int p) {
+size_t getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) {
 
     // Phase
-    unsigned int nperm;
+    size_t nperm;
 
     determinant_t d1[1];
     determinant_t d2[1];
@@ -142,21 +127,21 @@ int getPhase(size_t alphaConfig, size_t newAlphaConfig, int h, int p) {
     orbital_t p2[1];
     h1[0] = h;
     p2[0] = p;
-    nperm = get_nperm_single((unsigned int) 1, d1, d2, h1, p2);
-    int phase = ((unsigned int) 1) & nperm;
+    nperm = get_nperm_single((size_t) 1, d1, d2, h1, p2);
+    size_t phase = ((size_t) 1) & nperm;
     //printf(" %llu %llu (%d, %d) nperm = %d phase=%d \n",d1[0], d2[0], i,orbital_id,nperm,phase);
     return phase;
 }
 
 // Function to generate all possible alpha determinants for a list of given alpha configurations
-void generateAllAlphaDeterminants(int *configAlpha, int sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, int numConfigs, igraph_vector_t* allAlphaDeterminants) {
-    for (int i = 0; i < numConfigs; ++i) {
+void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, size_t numConfigs, igraph_vector_t* allAlphaDeterminants) {
+    for (size_t i = 0; i < numConfigs; ++i) {
         igraph_vector_t alphaDeterminants;
         igraph_vector_init(&alphaDeterminants, 0);
 
-        generateAlphaDeterminants(configAlpha, sizeAlpha, graph, alphaConfigs[i], &alphaDeterminants);
+        generateDeterminants(configAlpha, sizeAlpha, graph, alphaConfigs[i], &alphaDeterminants);
 
-        for (int j = 0; j < igraph_vector_size(&alphaDeterminants); ++j) {
+        for (size_t j = 0; j < igraph_vector_size(&alphaDeterminants); ++j) {
             igraph_vector_push_back(allAlphaDeterminants, VECTOR(alphaDeterminants)[j]);
         }
 
