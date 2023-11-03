@@ -25,13 +25,6 @@ int main(int argc,char **argv)
   PetscReal      error,tol,re,im;
   PetscScalar    kr,ki;
   Vec            xr,xi;
-  PetscInt       n=30,i,Istart,Iend,nev,maxit,its,nconv;
-
-  PetscFunctionBeginUser;
-  PetscCall(SlepcInitialize(&argc,&argv,(char*)0,help));
-
-  PetscCall(PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Laplacian Eigenproblem, n=%" PetscInt_FMT "\n\n",n));
 
   // Assume configAlpha and configBeta are sorted lists of all possible alpha and beta configurations
   size_t norb = 6;
@@ -123,32 +116,58 @@ int main(int argc,char **argv)
   printf(" alphaID = %ld betaID = %ld\n",findAlphaID(foundGlobalID,sizeAlpha,sizeBeta),findBetaID(foundGlobalID,sizeAlpha,sizeBeta));
   printf(" Phase = %d Phase = %d\n",getPhase(14,7,1,3), getPhase(7,14,3,1));
 
+  // Declare a matrix of size 3 x 4
+  int rows = 400;
+  int cols = 400;
+  int** matrix = declare_matrix(rows, cols);
+
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Compute the operator matrix that defines the eigensystem, Ax=kx
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+  PetscInt       n=sizeAlpha*sizeBeta,i,Istart,Iend,nev,maxit,its,nconv;
+
+  PetscFunctionBeginUser;
+  PetscCall(SlepcInitialize(&argc,&argv,(char*)0,help));
+
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Laplacian Eigenproblem, n=%" PetscInt_FMT "\n\n",n));
   PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
   PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatSetUp(A));
 
-  igraph_vector_t MElist;
-  igraph_vector_init(&MElist, 0);
-  igraph_vector_t Jdetlist;
-  igraph_vector_init(&Jdetlist, 0);
-
   PetscCall(MatGetOwnershipRange(A,&Istart,&Iend));
+  printf(" Istart=%ld Iend=%ld\n",Istart,Iend);
   for (i=Istart;i<Iend;i++) {
-    if (i>0) PetscCall(MatSetValue(A,i,i-1,-1.0,INSERT_VALUES));
-    if (i<n-1) PetscCall(MatSetValue(A,i,i+1,-1.0,INSERT_VALUES));
-    PetscCall(MatSetValue(A,i,i,2.0,INSERT_VALUES));
+
+    igraph_vector_t MElist;
+    igraph_vector_init(&MElist, 0);
+    igraph_vector_t Jdetlist;
+    igraph_vector_init(&Jdetlist, 0);
+
+    //if (i>0) PetscCall(MatSetValue(A,i,i-1,-1.0,INSERT_VALUES));
+    //if (i<n-1) PetscCall(MatSetValue(A,i,i+1,-1.0,INSERT_VALUES));
+    //PetscCall(MatSetValue(A,i,i,2.0,INSERT_VALUES));
     getAllHubbardMEs(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph);
+    for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
+      int Jid = VECTOR(Jdetlist)[j];
+      matrix[i][Jid] = VECTOR(MElist)[j];
+      PetscCall(MatSetValue(A,i,Jid,(double)VECTOR(MElist)[j],INSERT_VALUES));
+      //printf(" i=%d j=%d \n",i,Jid);
+    }
+
+    igraph_vector_destroy(&MElist);
+    igraph_vector_destroy(&Jdetlist);
   }
   PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
 
   PetscCall(MatCreateVecs(A,NULL,&xr));
   PetscCall(MatCreateVecs(A,NULL,&xi));
+
+  // Save file
+  save_matrix(matrix, rows, cols, "/tmp/benzene_c.csv");
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 Create the eigensolver and set various options
@@ -238,6 +257,12 @@ int main(int argc,char **argv)
 
   free(configAlpha);
   free(configBeta);
+
+  // Free the memory allocated for the matrix
+  for (int i = 0; i < rows; i++) {
+    free(matrix[i]);
+  }
+  free(matrix);
 
   /*
      Free work space

@@ -88,7 +88,7 @@ int getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) {
     h1[0] = h;
     p2[0] = p;
     nperm = get_nperm_single((size_t) 1, d1, d2, h1, p2);
-    size_t phase = ((size_t) 1) & nperm;
+    // size_t phase = ((size_t) 1) & nperm;
     //printf(" %llu %llu (%d, %d) nperm = %d phase=%d \n",d1[0], d2[0], i,orbital_id,nperm,phase);
     return phase;
 }
@@ -118,7 +118,7 @@ void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t*
                     size_t newAlphaConfig = alphaConfig ^ ((1 << i) | (1 << orbital_id));
 
                     // Find the phase
-                    phase = getPhase(alphaConfig, newAlphaConfig, i, orbital_id);
+                    phase = getPhase(alphaConfig, newAlphaConfig, i+1, orbital_id+1);
                     phase = phase & 1 == 1 ? -1 : 1;
 
                     // Find the position of the new alpha determinant in the list and add it to alphaDeterminants
@@ -129,7 +129,7 @@ void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t*
                     igraph_vector_push_back(alphaDeterminants, pos);
 
                     // Add the position of the new alpha determinant to the list
-                    //igraph_vector_push_back(alphaMEs, phase);
+                    igraph_vector_push_back(alphaMEs, phase);
                 }
             }
 
@@ -214,4 +214,77 @@ void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jde
     igraph_vector_destroy(&alphaMEs);
     igraph_vector_destroy(&betaDeterminants);
     igraph_vector_destroy(&betaMEs);
+}
+
+#include <stdio.h>
+#include <stdlib.h>
+
+// A function to declare a matrix of given size and initialize it to 0
+int** declare_matrix(int rows, int cols) {
+    // Allocate memory for the matrix
+    int** matrix = (int**)malloc(rows * sizeof(int*));
+    for (int i = 0; i < rows; i++) {
+        matrix[i] = (int*)malloc(cols * sizeof(int));
+    }
+
+    // Initialize the matrix to 0
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            matrix[i][j] = 0;
+        }
+    }
+
+    // Return the matrix
+    return matrix;
+}
+
+// A function to fill up the non zero elements of a matrix
+void fill_matrix(int** matrix, int rows, int cols) {
+    // Loop through the matrix
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            // If the element is 0, assign a random value between 1 and 10
+            if (matrix[i][j] == 0) {
+                matrix[i][j] = rand() % 10 + 1;
+            }
+        }
+    }
+}
+
+// A function to print a matrix
+void print_matrix(int** matrix, int rows, int cols) {
+    // Loop through the matrix
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            // Print the element with a space
+            printf("%d ", matrix[i][j]);
+        }
+        // Print a new line
+        printf("\n");
+    }
+}
+
+// A function to save a matrix in a file in CSV format
+void save_matrix(int** matrix, int rows, int cols, char* filename) {
+    // Open the file in write mode
+    FILE* file = fopen(filename, "w");
+
+    // Check if the file is opened successfully
+    if (file == NULL) {
+        printf("Error: could not open the file %s\n", filename);
+        return;
+    }
+
+    // Loop through the matrix
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            // Write the element to the file with a comma
+            fprintf(file, "%d,", matrix[i][j]);
+        }
+        // Write a new line to the file
+        fprintf(file, "\n");
+    }
+
+    // Close the file
+    fclose(file);
 }

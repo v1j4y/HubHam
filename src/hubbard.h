@@ -44,3 +44,10 @@ size_t* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) ;
 
 // Main function that calculates MEs
 void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph) ;
+
+
+// A function to declare a matrix of given size and initialize it to 0
+int** declare_matrix(int rows, int cols) ;
+
+// A function to save a matrix in a file in CSV format
+void save_matrix(int** matrix, int rows, int cols, char* filename) ;
