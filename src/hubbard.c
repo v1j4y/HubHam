@@ -13,8 +13,20 @@ size_t get_matelem(size_t deti, size_t detj) {
 
 // Function to find a global ID in the hash table given an alpha and beta ID
 size_t findGlobalID(size_t alphaID, size_t betaID, size_t nalpha) {
-    size_t id = (alphaID-1)*nalpha + betaID;
+    size_t id = alphaID*nalpha + betaID;
     return id;
+}
+
+// Functions to find alpha and beta IDs from globalID
+size_t findAlphaID(size_t globalID, size_t nalpha, size_t nbeta) {
+    size_t alphaid = (globalID / nalpha);
+    return alphaid;
+}
+
+size_t findBetaID(size_t globalID, size_t nalpha, size_t nbeta) {
+    size_t alphaid = (globalID / nalpha);
+    size_t betaid = globalID - alphaid*nalpha;
+    return betaid;
 }
 
 // Function to calculate binomial coefficient using lgamma function
@@ -62,10 +74,30 @@ void printPositions(size_t* positions, size_t size) {
     }
 }
 
+int getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) {
+
+    // Phase
+    size_t nperm;
+
+    determinant_t d1[1];
+    determinant_t d2[1];
+    d1[0] = alphaConfig;
+    d2[0] = newAlphaConfig;
+    orbital_t h1[1];
+    orbital_t p2[1];
+    h1[0] = h;
+    p2[0] = p;
+    nperm = get_nperm_single((size_t) 1, d1, d2, h1, p2);
+    size_t phase = ((size_t) 1) & nperm;
+    //printf(" %llu %llu (%d, %d) nperm = %d phase=%d \n",d1[0], d2[0], i,orbital_id,nperm,phase);
+    return phase;
+}
+
 // Function to generate all possible alpha determinants
-void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants) {
+void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs) {
     // Get the number of orbitals
     size_t norb = igraph_vcount(graph);
+    int phase = 1;
 
     // Loop over each orbital
     for (size_t i = 0; i < norb; ++i) {
@@ -85,12 +117,19 @@ void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t*
                     // Create a new alpha determinant by moving the electron
                     size_t newAlphaConfig = alphaConfig ^ ((1 << i) | (1 << orbital_id));
 
+                    // Find the phase
+                    phase = getPhase(alphaConfig, newAlphaConfig, i, orbital_id);
+                    phase = phase & 1 == 1 ? -1 : 1;
+
                     // Find the position of the new alpha determinant in the list and add it to alphaDeterminants
                     size_t pos;
                     findPositions(configAlpha, sizeAlpha, &newAlphaConfig, 1, &pos);
 
                     // Add the position of the new alpha determinant to the list
                     igraph_vector_push_back(alphaDeterminants, pos);
+
+                    // Add the position of the new alpha determinant to the list
+                    //igraph_vector_push_back(alphaMEs, phase);
                 }
             }
 
@@ -114,32 +153,15 @@ size_t* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) {
     return int_array;
 }
 
-size_t getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) {
-
-    // Phase
-    size_t nperm;
-
-    determinant_t d1[1];
-    determinant_t d2[1];
-    d1[0] = alphaConfig;
-    d2[0] = newAlphaConfig;
-    orbital_t h1[1];
-    orbital_t p2[1];
-    h1[0] = h;
-    p2[0] = p;
-    nperm = get_nperm_single((size_t) 1, d1, d2, h1, p2);
-    size_t phase = ((size_t) 1) & nperm;
-    //printf(" %llu %llu (%d, %d) nperm = %d phase=%d \n",d1[0], d2[0], i,orbital_id,nperm,phase);
-    return phase;
-}
-
 // Function to generate all possible alpha determinants for a list of given alpha configurations
 void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, size_t numConfigs, igraph_vector_t* allAlphaDeterminants) {
     for (size_t i = 0; i < numConfigs; ++i) {
         igraph_vector_t alphaDeterminants;
         igraph_vector_init(&alphaDeterminants, 0);
+        igraph_vector_t alphaMEs;
+        igraph_vector_init(&alphaMEs, 0);
 
-        generateDeterminants(configAlpha, sizeAlpha, graph, alphaConfigs[i], &alphaDeterminants);
+        generateDeterminants(configAlpha, sizeAlpha, graph, alphaConfigs[i], &alphaDeterminants, &alphaMEs);
 
         for (size_t j = 0; j < igraph_vector_size(&alphaDeterminants); ++j) {
             igraph_vector_push_back(allAlphaDeterminants, VECTOR(alphaDeterminants)[j]);
@@ -147,4 +169,49 @@ void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph
 
         igraph_vector_destroy(&alphaDeterminants);
     }
+}
+
+// Main function that calculates MEs
+void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph) {
+    int phaseAlpha;
+    int phaseBeta;
+    //Find alpha and beta ids
+    size_t alphaID = findAlphaID(Idet, sizeAlpha, sizeBeta);
+    size_t betaID  = findBetaID(Idet, sizeAlpha, sizeBeta);
+
+    // Find allowed excitations
+    igraph_vector_t alphaDeterminants;
+    igraph_vector_init(&alphaDeterminants, 0);
+    igraph_vector_t alphaMEs;
+    igraph_vector_init(&alphaMEs, 0);
+    generateDeterminants(configAlpha, sizeAlpha, graph, configAlpha[alphaID], &alphaDeterminants, &alphaMEs);
+    igraph_vector_t betaDeterminants;
+    igraph_vector_init(&betaDeterminants, 0);
+    igraph_vector_t betaMEs;
+    igraph_vector_init(&betaMEs, 0);
+    generateDeterminants(configBeta, sizeBeta, graph, configBeta[betaID], &betaDeterminants, &betaMEs);
+
+    for (size_t j = 0; j < igraph_vector_size(&alphaDeterminants); ++j) {
+        size_t alphaJ = VECTOR(alphaDeterminants)[j];
+        phaseAlpha = VECTOR(alphaMEs)[j];
+
+        size_t foundGlobalID = findGlobalID(alphaJ, betaID, sizeAlpha);
+
+        igraph_vector_push_back(Jdetlist, foundGlobalID);
+        igraph_vector_push_back(MElist, phaseAlpha);
+    }
+    for (size_t k = 0; k < igraph_vector_size(&betaDeterminants); ++k) {
+
+        size_t betaK = VECTOR(betaDeterminants)[k];
+        phaseBeta = VECTOR(betaMEs)[k];
+
+        size_t foundGlobalID = findGlobalID(alphaID, betaK, sizeBeta);
+
+        igraph_vector_push_back(Jdetlist, foundGlobalID);
+        igraph_vector_push_back(MElist, phaseBeta);
+    }
+    igraph_vector_destroy(&alphaDeterminants);
+    igraph_vector_destroy(&alphaMEs);
+    igraph_vector_destroy(&betaDeterminants);
+    igraph_vector_destroy(&betaMEs);
 }
