@@ -110,7 +110,8 @@ PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
 am__objects_1 = src/__top_builddir__bin_ex1-ex1.$(OBJEXT) \
 	src/__top_builddir__bin_ex1-hubbard.$(OBJEXT) \
-	src/__top_builddir__bin_ex1-readgraphmllib.$(OBJEXT)
+	src/__top_builddir__bin_ex1-readgraphmllib.$(OBJEXT) \
+	src/__top_builddir__bin_ex1-get_s2.$(OBJEXT)
 am___top_builddir__bin_ex1_OBJECTS = $(am__objects_1)
 __top_builddir__bin_ex1_OBJECTS =  \
 	$(am___top_builddir__bin_ex1_OBJECTS)
@@ -139,6 +140,7 @@ DEFAULT_INCLUDES = -I.
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = src/$(DEPDIR)/__top_builddir__bin_ex1-ex1.Po \
+	src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Po \
 	src/$(DEPDIR)/__top_builddir__bin_ex1-hubbard.Po \
 	src/$(DEPDIR)/__top_builddir__bin_ex1-readgraphmllib.Po
 am__mv = mv -f
@@ -341,8 +343,8 @@ ACLOCAL_AMFLAGS = -I m4 --install
 VERSION_MAJOR = @VERSION_MAJOR@
 VERSION_MINOR = @VERSION_MINOR@
 VERSION_PATCH = @VERSION_PATCH@
-src_main_c = src/ex1.c src/hubbard.c src/readgraphmllib.c
-src_main_h = src/hubbard.h src/readgraphmllib.h
+src_main_c = src/ex1.c src/hubbard.c src/readgraphmllib.c src/get_s2.c
+src_main_h = src/hubbard.h src/readgraphmllib.h src/get_s2.h
 __top_builddir__bin_ex1_SOURCES = $(src_main_c)
 __top_builddir__bin_ex1_CPPFLAGS = $(AM_CPPFLAGS)
 __top_builddir__bin_ex1_CFLAGS = $(AM_CFLAGS) \
@@ -462,6 +464,8 @@ src/__top_builddir__bin_ex1-hubbard.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/__top_builddir__bin_ex1-readgraphmllib.$(OBJEXT):  \
 	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/__top_builddir__bin_ex1-get_s2.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 $(top_builddir)/bin/$(am__dirstamp):
 	@$(MKDIR_P) $(top_builddir)/bin
 	@: > $(top_builddir)/bin/$(am__dirstamp)
@@ -478,6 +482,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 include src/$(DEPDIR)/__top_builddir__bin_ex1-ex1.Po # am--include-marker
+include src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Po # am--include-marker
 include src/$(DEPDIR)/__top_builddir__bin_ex1-hubbard.Po # am--include-marker
 include src/$(DEPDIR)/__top_builddir__bin_ex1-readgraphmllib.Po # am--include-marker
 
@@ -552,6 +557,20 @@ src/__top_builddir__bin_ex1-readgraphmllib.obj: src/readgraphmllib.c
 #	$(AM_V_CC)source='src/readgraphmllib.c' object='src/__top_builddir__bin_ex1-readgraphmllib.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(__top_builddir__bin_ex1_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_ex1_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_ex1-readgraphmllib.obj `if test -f 'src/readgraphmllib.c'; then $(CYGPATH_W) 'src/readgraphmllib.c'; else $(CYGPATH_W) '$(srcdir)/src/readgraphmllib.c'; fi`
+
+src/__top_builddir__bin_ex1-get_s2.o: src/get_s2.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(__top_builddir__bin_ex1_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_ex1_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_ex1-get_s2.o -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Tpo -c -o src/__top_builddir__bin_ex1-get_s2.o `test -f 'src/get_s2.c' || echo '$(srcdir)/'`src/get_s2.c
+	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Tpo src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Po
+#	$(AM_V_CC)source='src/get_s2.c' object='src/__top_builddir__bin_ex1-get_s2.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(__top_builddir__bin_ex1_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_ex1_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_ex1-get_s2.o `test -f 'src/get_s2.c' || echo '$(srcdir)/'`src/get_s2.c
+
+src/__top_builddir__bin_ex1-get_s2.obj: src/get_s2.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(__top_builddir__bin_ex1_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_ex1_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_ex1-get_s2.obj -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Tpo -c -o src/__top_builddir__bin_ex1-get_s2.obj `if test -f 'src/get_s2.c'; then $(CYGPATH_W) 'src/get_s2.c'; else $(CYGPATH_W) '$(srcdir)/src/get_s2.c'; fi`
+	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Tpo src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Po
+#	$(AM_V_CC)source='src/get_s2.c' object='src/__top_builddir__bin_ex1-get_s2.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(__top_builddir__bin_ex1_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_ex1_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_ex1-get_s2.obj `if test -f 'src/get_s2.c'; then $(CYGPATH_W) 'src/get_s2.c'; else $(CYGPATH_W) '$(srcdir)/src/get_s2.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -835,6 +854,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 		-rm -f src/$(DEPDIR)/__top_builddir__bin_ex1-ex1.Po
+	-rm -f src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Po
 	-rm -f src/$(DEPDIR)/__top_builddir__bin_ex1-hubbard.Po
 	-rm -f src/$(DEPDIR)/__top_builddir__bin_ex1-readgraphmllib.Po
 	-rm -f Makefile
@@ -885,6 +905,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
 		-rm -f src/$(DEPDIR)/__top_builddir__bin_ex1-ex1.Po
+	-rm -f src/$(DEPDIR)/__top_builddir__bin_ex1-get_s2.Po
 	-rm -f src/$(DEPDIR)/__top_builddir__bin_ex1-hubbard.Po
 	-rm -f src/$(DEPDIR)/__top_builddir__bin_ex1-readgraphmllib.Po
 	-rm -f Makefile

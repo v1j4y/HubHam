@@ -205,7 +205,7 @@ void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jde
         size_t betaK = VECTOR(betaDeterminants)[k];
         phaseBeta = VECTOR(betaMEs)[k];
 
-        size_t foundGlobalID = findGlobalID(alphaID, betaK, sizeBeta);
+        size_t foundGlobalID = findGlobalID(alphaID, betaK, sizeAlpha);
 
         igraph_vector_push_back(Jdetlist, foundGlobalID);
         igraph_vector_push_back(MElist, phaseBeta);

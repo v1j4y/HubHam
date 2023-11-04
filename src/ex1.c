@@ -16,6 +16,7 @@ static char help[] = "Standard symmetric eigenproblem corresponding to the Lapla
 
 #include "hubbard.h"
 #include "readgraphmllib.h"
+#include "get_s2.h"
 
 int main(int argc,char **argv)
 {
@@ -26,8 +27,10 @@ int main(int argc,char **argv)
   PetscScalar    kr,ki;
   Vec            xr,xi;
   PetscLogDouble t1,t2,tt1,tt2;
+  PetscReal normfin;
+  PetscReal xymatfin = 0.0;
 
-  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/phenanthrene.graphml";
+  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/graphm3.graphml";
   FILE* graphmlFile = fopen(graphmlFileName, "r");
 
   if (graphmlFile == NULL) {
@@ -63,9 +66,9 @@ int main(int argc,char **argv)
   qsort(configBeta, sizeBeta, sizeof(size_t), compare);
 
   // Declare a matrix of size 3 x 4
-  //int rows = sizeAlpha * sizeBeta;
-  //int cols = sizeAlpha * sizeBeta;
-  //int** matrix = declare_matrix(rows, cols);
+  int rows = sizeAlpha * sizeBeta;
+  int cols = sizeAlpha * sizeBeta;
+  int** matrix = declare_matrix(rows, cols);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Define Hamiltonian
@@ -110,7 +113,7 @@ int main(int argc,char **argv)
     getAllHubbardMEs(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph);
     for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
       int Jid = VECTOR(Jdetlist)[j];
-      //matrix[i][Jid] = t*VECTOR(MElist)[j];
+      matrix[i][Jid] = t*VECTOR(MElist)[j];
       PetscCall(MatSetValue(A,i,Jid,t*(double)VECTOR(MElist)[j],INSERT_VALUES));
     }
 
@@ -131,7 +134,7 @@ int main(int argc,char **argv)
   PetscCall(MatCreateVecs(A,NULL,&xi));
 
   // Save file
-  //save_matrix(matrix, rows, cols, "/tmp/benzene_c.csv");
+  save_matrix(matrix, rows, cols, "/tmp/benzene_c.csv");
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 Create the eigensolver and set various options
@@ -219,9 +222,51 @@ int main(int argc,char **argv)
 #endif
       if (im!=0.0) PetscCall(PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error));
       else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g\n",(double)re,(double)error));
+
+      /*
+       * Get eigenvector
+       */
+      Vec vi, vr;
+      BV V;
+      PetscReal norm;
+      PetscReal *values;
+      int sbx = 0, pos1 = 1, pos2 = 4;
+      PetscReal xymat = 0.0;
+      PetscReal xymat2 = 0.0;
+      PetscReal xymat3 = 0.0;
+      PetscReal xymat4 = 0.0;
+      PetscReal weight3 = 0.0;
+      PetscReal norm2 = 0.0;
+      PetscReal norm3 = 0.0;
+      PetscReal norm4 = 0.0;
+      EPSGetBV(eps,&V);
+      BVGetColumn(V,i,&vi);
+      VecNorm(vi,NORM_2,&norm);
+      VecGetArray(vi, &values);
+      norm = 0.0;
+      get_s2(values, &Istart, &Iend, values, &num_vertices, &norm, &norm2, &norm3, &norm4, &xymat, &xymat2, &xymat3, &xymat4, &weight3,
+             &sbx, &sbx, &sbx, &sbx, &sbx, &sbx,
+             &sbx, &sbx, &sbx, &sbx,
+             &sbx, &sbx, &pos1, &pos2, &pos1, num_vertices, configAlpha, sizeAlpha, configBeta, sizeBeta);
+      //for(int j=Istart;j<Iend;++j){
+      //  norm += values[j]*values[j];
+      //}
+      MPI_Reduce(&xymat, &xymatfin, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
+      MPI_Reduce(&norm, &normfin, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"norm = %10.5f xymat = %10.5f\n",normfin,xymatfin));
+      VecRestoreArray(vi, &values);
+      BVRestoreColumn(V,i,&vi);
     }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
   }
+  //int ideter[num_vertices], addr;
+  //getdet(10, ideter, configAlpha, sizeAlpha, configBeta, sizeBeta, num_vertices);
+  //printf("\n");
+  //for( int i=0;i<num_vertices;++i ) {
+  //  printf(" %d ",ideter[i]);
+  //}
+  //adr (ideter, &addr, configAlpha, sizeAlpha, configBeta, sizeBeta, num_vertices);
+  //printf("\n\n %d \n",addr);
 
   //igraph_vector_destroy(&alphaDeterminants);
   //igraph_vector_destroy(&alphaMEs);
