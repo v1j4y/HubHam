@@ -25,8 +25,9 @@ int main(int argc,char **argv)
   PetscReal      error,tol,re,im;
   PetscScalar    kr,ki;
   Vec            xr,xi;
+  PetscLogDouble t1,t2,tt1,tt2;
 
-  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/graphm3.graphml";
+  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/napthalene_c2.graphml";
   FILE* graphmlFile = fopen(graphmlFileName, "r");
 
   if (graphmlFile == NULL) {
@@ -41,7 +42,6 @@ int main(int argc,char **argv)
   if (readGraphMLFile(graphmlFile, &graph)) {
     // Successfully read the graph, now you can work with 'graph'.
     num_vertices = igraph_vcount(&graph);
-    //printf("Number of vertices: %ld\n", (long)num_vertices);
   }
 
   // Assume configAlpha and configBeta are sorted lists of all possible alpha and beta configurations
@@ -79,6 +79,7 @@ int main(int argc,char **argv)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
   PetscInt       n=sizeAlpha*sizeBeta,i,Istart,Iend,nev,maxit,its,nconv;
+  PetscInt		   ncv, mpd;
 
   PetscFunctionBeginUser;
   PetscCall(SlepcInitialize(&argc,&argv,(char*)0,help));
@@ -87,10 +88,13 @@ int main(int argc,char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Laplacian Eigenproblem, n=%" PetscInt_FMT "\n\n",n));
   PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
   PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
-  PetscCall(MatSetFromOptions(A));
-  PetscCall(MatSetUp(A));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,10*num_vertices,NULL,10*num_vertices,NULL,&A));
+  PetscCall(MatMPIAIJSetPreallocation(A,10*num_vertices,NULL,10*num_vertices,NULL));
+  //PetscCall(MatSetFromOptions(A));
+  //PetscCall(MatSetUp(A));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of configurations alpha = %ld, beta = %ld\n",sizeAlpha,sizeBeta));
+  PetscCall(PetscTime(&tt1));
 
   PetscCall(MatGetOwnershipRange(A,&Istart,&Iend));
   for (i=Istart;i<Iend;i++) {
@@ -113,8 +117,15 @@ int main(int argc,char **argv)
     igraph_vector_destroy(&MElist);
     igraph_vector_destroy(&Jdetlist);
   }
+  PetscCall(PetscTime(&tt2));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to build the matrix: %f\n",tt2-tt1));
+
+
+  PetscCall(PetscTime(&tt1));
   PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
+  PetscCall(PetscTime(&tt2));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to assemble the matrix: %f\n",tt2-tt1));
 
   PetscCall(MatCreateVecs(A,NULL,&xr));
   PetscCall(MatCreateVecs(A,NULL,&xi));
@@ -141,12 +152,23 @@ int main(int argc,char **argv)
      Set solver parameters at runtime
   */
   PetscCall(EPSSetFromOptions(eps));
+  tol = 1.e-9;
+  maxit = 10000000;
+  PetscCall(EPSSetTolerances(eps,tol,maxit));
+  ncv  = 9;
+  mpd  = 10;
+  nev  = 2;
+  PetscCall(EPSSetDimensions(eps,nev,PETSC_DECIDE,PETSC_DECIDE));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                       Solve the eigensystem
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+  PetscCall(PetscTime(&t1));
   PetscCall(EPSSolve(eps));
+  PetscCall(PetscTime(&t2));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used: %f\n",t2-t1));
+
   /*
      Optional: Get some information from the solver and display it
   */
@@ -158,6 +180,7 @@ int main(int argc,char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenvalues: %" PetscInt_FMT "\n",nev));
   PetscCall(EPSGetTolerances(eps,&tol,&maxit));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g, maxit=%" PetscInt_FMT "\n",(double)tol,maxit));
+
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                     Display solution and clean up
