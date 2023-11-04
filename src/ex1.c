@@ -27,7 +27,7 @@ int main(int argc,char **argv)
   Vec            xr,xi;
   PetscLogDouble t1,t2,tt1,tt2;
 
-  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/napthalene_c2.graphml";
+  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/phenanthrene.graphml";
   FILE* graphmlFile = fopen(graphmlFileName, "r");
 
   if (graphmlFile == NULL) {
@@ -88,8 +88,8 @@ int main(int argc,char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Laplacian Eigenproblem, n=%" PetscInt_FMT "\n\n",n));
   PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
   PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,10*num_vertices,NULL,10*num_vertices,NULL,&A));
-  PetscCall(MatMPIAIJSetPreallocation(A,10*num_vertices,NULL,10*num_vertices,NULL));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,3*num_vertices,NULL,3*num_vertices,NULL,&A));
+  PetscCall(MatMPIAIJSetPreallocation(A,3*num_vertices,NULL,3*num_vertices,NULL));
   //PetscCall(MatSetFromOptions(A));
   //PetscCall(MatSetUp(A));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
@@ -167,7 +167,7 @@ int main(int argc,char **argv)
   PetscCall(PetscTime(&t1));
   PetscCall(EPSSolve(eps));
   PetscCall(PetscTime(&t2));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used: %f\n",t2-t1));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to Solve EVP: %f\n",t2-t1));
 
   /*
      Optional: Get some information from the solver and display it
