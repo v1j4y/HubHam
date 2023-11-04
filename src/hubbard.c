@@ -90,7 +90,7 @@ int getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) {
     nperm = get_nperm_single((size_t) 1, d1, d2, h1, p2);
     // size_t phase = ((size_t) 1) & nperm;
     //printf(" %llu %llu (%d, %d) nperm = %d phase=%d \n",d1[0], d2[0], i,orbital_id,nperm,phase);
-    return phase;
+    return nperm;
 }
 
 // Function to generate all possible alpha determinants
@@ -216,8 +216,17 @@ void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jde
     igraph_vector_destroy(&betaMEs);
 }
 
-#include <stdio.h>
-#include <stdlib.h>
+// Get the diagonal part of the hubbard Hamiltonian
+int getHubbardDiag(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta) {
+    //Find alpha and beta ids
+    size_t alphaID = findAlphaID(Idet, sizeAlpha, sizeBeta);
+    size_t betaID  = findBetaID(Idet, sizeAlpha, sizeBeta);
+
+    size_t alphadet = configAlpha[alphaID];
+    size_t betadet  = configBeta[betaID];
+    size_t doublyOcc = popcnt(alphadet & betadet);
+    return doublyOcc;
+}
 
 // A function to declare a matrix of given size and initialize it to 0
 int** declare_matrix(int rows, int cols) {

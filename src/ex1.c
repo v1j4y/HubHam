@@ -114,12 +114,19 @@ int main(int argc,char **argv)
     printf("(%ld, %ld) Global ID: %ld\n", alphaID, betaID, foundGlobalID);
   }
   printf(" alphaID = %ld betaID = %ld\n",findAlphaID(foundGlobalID,sizeAlpha,sizeBeta),findBetaID(foundGlobalID,sizeAlpha,sizeBeta));
-  printf(" Phase = %d Phase = %d\n",getPhase(14,7,1,3), getPhase(7,14,3,1));
+  printf(" Phase = %d Phase = %d\n",getPhase(14,7,1,4) & 1 == 1 ? -1 : 1, getPhase(7,14,4,1) & 1 == 1 ? -1 : 1);
 
   // Declare a matrix of size 3 x 4
   int rows = 400;
   int cols = 400;
   int** matrix = declare_matrix(rows, cols);
+
+  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+     Define Hamiltonian
+     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+  double U =  1.0;
+  double t = -1.0;
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Compute the operator matrix that defines the eigensystem, Ax=kx
@@ -149,11 +156,14 @@ int main(int argc,char **argv)
     //if (i>0) PetscCall(MatSetValue(A,i,i-1,-1.0,INSERT_VALUES));
     //if (i<n-1) PetscCall(MatSetValue(A,i,i+1,-1.0,INSERT_VALUES));
     //PetscCall(MatSetValue(A,i,i,2.0,INSERT_VALUES));
+    int diag = getHubbardDiag(i, configAlpha, sizeAlpha, configBeta, sizeBeta);
+    PetscCall(MatSetValue(A,i,i,(double)diag,INSERT_VALUES));
+    matrix[i][i] = (double)diag*U;
     getAllHubbardMEs(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph);
     for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
       int Jid = VECTOR(Jdetlist)[j];
-      matrix[i][Jid] = VECTOR(MElist)[j];
-      PetscCall(MatSetValue(A,i,Jid,(double)VECTOR(MElist)[j],INSERT_VALUES));
+      matrix[i][Jid] = t*VECTOR(MElist)[j];
+      PetscCall(MatSetValue(A,i,Jid,t*(double)VECTOR(MElist)[j],INSERT_VALUES));
       //printf(" i=%d j=%d \n",i,Jid);
     }
 
@@ -182,6 +192,7 @@ int main(int argc,char **argv)
   */
   PetscCall(EPSSetOperators(eps,A,NULL));
   PetscCall(EPSSetProblemType(eps,EPS_HEP));
+  PetscCall(EPSSetWhichEigenpairs(eps,EPS_SMALLEST_REAL));
 
   /*
      Set solver parameters at runtime

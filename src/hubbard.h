@@ -45,6 +45,8 @@ size_t* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) ;
 // Main function that calculates MEs
 void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph) ;
 
+// Get the diagonal part of the hubbard Hamiltonian
+int getHubbardDiag(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta) ;
 
 // A function to declare a matrix of given size and initialize it to 0
 int** declare_matrix(int rows, int cols) ;
