@@ -102,8 +102,8 @@ int main(int argc,char **argv)
     */
   PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
   PetscCall(MatSetSizes(S2,PETSC_DECIDE,PETSC_DECIDE,n,n));
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,num_vertices*num_vertices,NULL,num_vertices*num_vertices,NULL,&S2));
-  PetscCall(MatMPIAIJSetPreallocation(S2,num_vertices*num_vertices,NULL,num_vertices*num_vertices,NULL));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,2*num_vertices,NULL,2*num_vertices,NULL,&S2));
+  PetscCall(MatMPIAIJSetPreallocation(S2,2*num_vertices,NULL,2*num_vertices,NULL));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of configurations alpha = %ld, beta = %ld\n",sizeAlpha,sizeBeta));
@@ -200,14 +200,14 @@ int main(int argc,char **argv)
   /*
      Set solver parameters at runtime
   */
-  PetscCall(EPSSetFromOptions(eps));
   tol = 1.e-9;
   maxit = 10000000;
   PetscCall(EPSSetTolerances(eps,tol,maxit));
-  ncv  = 9;
-  mpd  = 10;
-  nev  = 4;
-  PetscCall(EPSSetDimensions(eps,nev,PETSC_DECIDE,PETSC_DECIDE));
+  //ncv  = 9;
+  //mpd  = 10;
+  //nev  = 4;
+  //PetscCall(EPSSetDimensions(eps,nev,PETSC_DECIDE,PETSC_DECIDE));
+  PetscCall(EPSSetFromOptions(eps));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                       Solve the eigensystem
