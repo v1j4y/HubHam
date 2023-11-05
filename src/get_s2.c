@@ -8,7 +8,7 @@
 #include "get_s2.h"
 #include "hubbard.h"
 
-int getdet(long int iii, int *ideter, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) {
+void getdet(long int iii, int *ideter, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) {
     //Find alpha and beta ids
     //printf(" In getdet %d\n",iii);
     size_t alphaID = findAlphaID(iii, sizeAlpha, sizeBeta);
@@ -31,11 +31,9 @@ int getdet(long int iii, int *ideter, size_t* configAlpha, long int sizeAlpha, s
       //printf("%d \n",betadet & (1<<i));
       ideter[i] = occv[occ];
     }
-    int phase = 1;//find_permutations_and_phase(alphadet, betadet) ;
-    return phase;
 }
 
-int adr (int *ideter, long int *iii, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) {
+void adr (int *ideter, long int *iii, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) {
     int occ = 0;
     size_t alphadet = 0;
     size_t betadet = 0;
@@ -62,8 +60,6 @@ int adr (int *ideter, long int *iii, size_t* configAlpha, long int sizeAlpha, si
     findPositions(configBeta , sizeBeta , &betadet , 1, &posb);
     size_t foundGlobalID = findGlobalID(posa, posb, sizeAlpha);
     iii[0] = foundGlobalID;
-    int phase = 1;//find_permutations_and_phase(alphadet, betadet) ;
-    return phase;
 }
 
 /* 
@@ -119,7 +115,7 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
 //ierr = PetscTime(&tt1);CHKERRQ(ierr);
   	  //for(ii=*Istart;ii<*Iend;ii++) {
       //  iii = ii + 0;
-      //  int phase = getdet (iii, ideter, configAlpha, sizeAlpha, configBeta,  sizeBeta, *natom);
+      //  getdet (iii, ideter, configAlpha, sizeAlpha, configBeta,  sizeBeta, *natom);
       //  for(kkio=0;kkio<4;++kkio) printf(" %d ",ideter[kkio]);
       //  printf("| %d %d\n",iii, phase);
   	  //}
@@ -140,7 +136,7 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
               pos1 = 0;
               pos2 = 0;
               pos3 = 0;
-              int phase = getdet (iii, ideter, configAlpha, sizeAlpha, configBeta,  sizeBeta, *natom);
+              getdet (iii, ideter, configAlpha, sizeAlpha, configBeta,  sizeBeta, *natom);
               *norm=*norm+valxr[iiii]*valxr[iiii];
               for(kko=*s21a1;kko<=*s21a2;kko++){
                   if(ideter[kko]==3){
@@ -297,7 +293,7 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=2;
                         ideter2[kok]=1;
-                        int phase2 = adr (ideter2, &iaa2,
+                        adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
                         //iaa2 = iaa2 - 1;
@@ -354,7 +350,7 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=1;
                         ideter2[kok]=2;
-                        int phase2 = adr (ideter2, &iaa2,
+                        adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
                         //iaa2 = iaa2 - 1;
@@ -487,7 +483,7 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=2;
                         ideter2[kok]=1;
-                        int phase2 = adr (ideter2, &iaa2,
+                        adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
                         //iaa2 = iaa2 - 1;
@@ -544,7 +540,7 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=1;
                         ideter2[kok]=2;
-                        int phase2 = adr (ideter2, &iaa2,
+                        adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
                         //iaa2 = iaa2 - 1;
@@ -677,7 +673,7 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=2;
                         ideter2[kok]=1;
-                        int phase2 = adr (ideter2, &iaa2,
+                        adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
                         //iaa2 = iaa2 - 1;
@@ -732,7 +728,7 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=1;
                         ideter2[kok]=2;
-                        int phase2 = adr (ideter2, &iaa2,
+                        adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
                         //iaa2 = iaa2 - 1;

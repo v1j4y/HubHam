@@ -1,5 +1,6 @@
 #include "hubbard.h"
 #include "readgraphmllib.h"
+#include "get_s2.h"
 
 size_t get_matelem(size_t deti, size_t detj) {
   exc_number_t exij;
@@ -236,6 +237,68 @@ void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jde
     igraph_vector_destroy(&betaMEs);
 }
 
+
+// Main function that generates S2 operator
+void getS2Operator(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph, int natom, int natomax) {
+    int phaseAlpha;
+    int phaseBeta;
+    int ideter[natomax];
+    int ideter2[natomax];
+    int kko, kok, kkio;
+    int iiii, iii, ii;
+    size_t iaa2;
+    double xmat = 0.0;
+    //Find alpha and beta ids
+    size_t alphaID = findAlphaID(Idet, sizeAlpha, sizeBeta);
+    size_t betaID  = findBetaID(Idet, sizeAlpha, sizeBeta);
+    size_t alphadet = configAlpha[alphaID];
+    size_t betadet = configBeta[betaID];
+
+    getdet (Idet, ideter, configAlpha, sizeAlpha, configBeta,  sizeBeta, natom);
+    //printf(" %d : ",Idet);
+    //for(kko=0;kko<natom;++kko) printf(" %d ",ideter[kko]);
+    //printf("\n");
+    for( kko = 0; kko < natom; ++kko ) {
+        if(ideter[kko] != 4 && ideter[kko] != 3) xmat=xmat+(3.0/4.0);
+        for( kok = kko + 1; kok < natom; ++kok ) {
+            if(ideter[kko] == 1 && ideter[kok] == 1){
+                xmat=xmat+(1.0/2.0);
+            }
+            if(ideter[kko] == 2 && ideter[kok] == 2){
+                xmat=xmat+(1.0/2.0);
+            }
+            if(ideter[kko] == 1 && ideter[kok] == 2){
+                xmat=xmat-(1.0/2.0);
+                for(kkio=0;kkio<=natom-1;kkio++){
+                    ideter2[kkio]=ideter[kkio];
+                }
+                ideter2[kko]=2;
+                ideter2[kok]=1;
+                adr (ideter2, &iaa2,
+                     configAlpha, sizeAlpha,
+                     configBeta,  sizeBeta, natom);
+                igraph_vector_push_back(Jdetlist, iaa2);
+                igraph_vector_push_back(MElist, 1.0);
+            }
+            if(ideter[kko] == 2 && ideter[kok] == 1){
+                xmat=xmat-(1.0/2.0);
+                for(kkio=0;kkio<=natom-1;kkio++){
+                    ideter2[kkio]=ideter[kkio];
+                }
+                ideter2[kko]=1;
+                ideter2[kok]=2;
+                adr (ideter2, &iaa2,
+                     configAlpha, sizeAlpha,
+                     configBeta,  sizeBeta, natom);
+                igraph_vector_push_back(Jdetlist, iaa2);
+                igraph_vector_push_back(MElist, 1.0);
+            }
+        }
+    }
+    igraph_vector_push_back(Jdetlist, Idet);
+    igraph_vector_push_back(MElist, xmat);
+}
+
 // Get the diagonal part of the hubbard Hamiltonian
 int getHubbardDiag(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta) {
     //Find alpha and beta ids
@@ -249,11 +312,11 @@ int getHubbardDiag(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *c
 }
 
 // A function to declare a matrix of given size and initialize it to 0
-int** declare_matrix(int rows, int cols) {
+double** declare_matrix(int rows, int cols) {
     // Allocate memory for the matrix
-    int** matrix = (int**)malloc(rows * sizeof(int*));
+    double** matrix = (double**)malloc(rows * sizeof(double*));
     for (int i = 0; i < rows; i++) {
-        matrix[i] = (int*)malloc(cols * sizeof(int));
+        matrix[i] = (double*)malloc(cols * sizeof(double));
     }
 
     // Initialize the matrix to 0
@@ -294,7 +357,7 @@ void print_matrix(int** matrix, int rows, int cols) {
 }
 
 // A function to save a matrix in a file in CSV format
-void save_matrix(int** matrix, int rows, int cols, char* filename) {
+void save_matrix(double** matrix, int rows, int cols, char* filename) {
     // Open the file in write mode
     FILE* file = fopen(filename, "w");
 
@@ -308,7 +371,7 @@ void save_matrix(int** matrix, int rows, int cols, char* filename) {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
             // Write the element to the file with a comma
-            fprintf(file, "%d,", matrix[i][j]);
+            fprintf(file, "%10.5f,", matrix[i][j]);
         }
         // Write a new line to the file
         fprintf(file, "\n");

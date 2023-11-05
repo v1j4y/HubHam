@@ -48,11 +48,14 @@ void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jde
 // Get the diagonal part of the hubbard Hamiltonian
 int getHubbardDiag(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta) ;
 
+// Main function that generates S2 operator
+void getS2Operator(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph, int natom, int natomax) ;
+
 // A function to declare a matrix of given size and initialize it to 0
-int** declare_matrix(int rows, int cols) ;
+double** declare_matrix(int rows, int cols) ;
 
 // A function to save a matrix in a file in CSV format
-void save_matrix(int** matrix, int rows, int cols, char* filename) ;
+void save_matrix(double** matrix, int rows, int cols, char* filename) ;
 
 // A function to find the number of permutations and the phase for a given pair of bit strings
 int calculate (int a, int b) ;

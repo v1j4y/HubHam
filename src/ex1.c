@@ -21,16 +21,17 @@ static char help[] = "Standard symmetric eigenproblem corresponding to the Lapla
 int main(int argc,char **argv)
 {
   Mat            A;           /* problem matrix */
+  Mat            S2;          /* S2 oper matrix */
   EPS            eps;         /* eigenproblem solver context */
   EPSType        type;
   PetscReal      error,tol,re,im;
-  PetscScalar    kr,ki;
-  Vec            xr,xi;
+  PetscScalar    kr,ki, dot;
+  Vec            xr,xi, vs2;
   PetscLogDouble t1,t2,tt1,tt2;
   PetscReal normfin;
   PetscReal xymatfin = 0.0;
 
-  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/c4h6.graphml";
+  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/graphm3.graphml";
   FILE* graphmlFile = fopen(graphmlFileName, "r");
 
   if (graphmlFile == NULL) {
@@ -51,6 +52,7 @@ int main(int argc,char **argv)
   size_t norb = num_vertices;
   size_t nalpha = norb/2;
   size_t nbeta = norb/2;
+  int natomax = 100;
 
   size_t sizeAlpha = binomialCoeff(norb, nalpha);
   size_t sizeBeta = binomialCoeff(norb, nbeta);
@@ -68,7 +70,7 @@ int main(int argc,char **argv)
   // Declare a matrix of size 3 x 4
   int rows = sizeAlpha * sizeBeta;
   int cols = rows;
-  int** matrix = declare_matrix(rows, cols);
+  double** matrix = declare_matrix(rows, cols);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Define Hamiltonian
@@ -95,10 +97,21 @@ int main(int argc,char **argv)
   PetscCall(MatMPIAIJSetPreallocation(A,3*num_vertices,NULL,3*num_vertices,NULL));
   //PetscCall(MatSetFromOptions(A));
   //PetscCall(MatSetUp(A));
+  /*
+   * Matrix for the S2 operator
+    */
+  PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
+  PetscCall(MatSetSizes(S2,PETSC_DECIDE,PETSC_DECIDE,n,n));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,num_vertices*num_vertices,NULL,num_vertices*num_vertices,NULL,&S2));
+  PetscCall(MatMPIAIJSetPreallocation(S2,num_vertices*num_vertices,NULL,num_vertices*num_vertices,NULL));
+
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of configurations alpha = %ld, beta = %ld\n",sizeAlpha,sizeBeta));
   PetscCall(PetscTime(&tt1));
 
+  /*
+   * Initialize Hamiltonian
+    */
   PetscCall(MatGetOwnershipRange(A,&Istart,&Iend));
   for (i=Istart;i<Iend;i++) {
 
@@ -109,11 +122,11 @@ int main(int argc,char **argv)
 
     int diag = getHubbardDiag(i, configAlpha, sizeAlpha, configBeta, sizeBeta);
     PetscCall(MatSetValue(A,i,i,(double)diag,INSERT_VALUES));
-    matrix[i][i] = (double)diag*U;
+    //matrix[i][i] = (double)diag*U;
     getAllHubbardMEs(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph);
     for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
       int Jid = VECTOR(Jdetlist)[j];
-      matrix[i][Jid] = t*VECTOR(MElist)[j];
+      //matrix[i][Jid] = t*VECTOR(MElist)[j];
       PetscCall(MatSetValue(A,i,Jid,t*(double)VECTOR(MElist)[j],INSERT_VALUES));
     }
 
@@ -130,8 +143,41 @@ int main(int argc,char **argv)
   PetscCall(PetscTime(&tt2));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to assemble the matrix: %f\n",tt2-tt1));
 
+  /*
+   * Initialize S2 operator
+    */
+  PetscCall(MatGetOwnershipRange(S2,&Istart,&Iend));
+  for (i=Istart;i<Iend;i++) {
+
+    igraph_vector_t MElist;
+    igraph_vector_init(&MElist, 0);
+    igraph_vector_t Jdetlist;
+    igraph_vector_init(&Jdetlist, 0);
+
+    getS2Operator(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph, num_vertices, natomax);
+    for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
+      int Jid = VECTOR(Jdetlist)[j];
+      matrix[i][Jid] = VECTOR(MElist)[j];
+      //printf(" %d %10.5f \n",Jid, VECTOR(MElist)[j]);
+      PetscCall(MatSetValue(S2,i,Jid,t*(double)VECTOR(MElist)[j],INSERT_VALUES));
+    }
+
+    igraph_vector_destroy(&MElist);
+    igraph_vector_destroy(&Jdetlist);
+  }
+  PetscCall(PetscTime(&tt2));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to build the S2 operator: %f\n",tt2-tt1));
+
+
+  PetscCall(PetscTime(&tt1));
+  PetscCall(MatAssemblyBegin(S2,MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(S2,MAT_FINAL_ASSEMBLY));
+  PetscCall(PetscTime(&tt2));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to assemble the matrix: %f\n",tt2-tt1));
+
   PetscCall(MatCreateVecs(A,NULL,&xr));
   PetscCall(MatCreateVecs(A,NULL,&xi));
+  PetscCall(MatCreateVecs(A,NULL,&vs2));
 
   // Save file
   save_matrix(matrix, rows, cols, "/tmp/benzene_c.csv");
@@ -160,7 +206,7 @@ int main(int argc,char **argv)
   PetscCall(EPSSetTolerances(eps,tol,maxit));
   ncv  = 9;
   mpd  = 10;
-  nev  = 80;
+  nev  = 4;
   PetscCall(EPSSetDimensions(eps,nev,PETSC_DECIDE,PETSC_DECIDE));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -199,8 +245,8 @@ int main(int argc,char **argv)
        Display eigenvalues and relative errors
     */
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,
-         "           k          ||Ax-kx||/||kx||\n"
-         "   ----------------- ------------------\n"));
+         "           k          ||Ax-kx||/||kx||         S2    \n"
+         "   ----------------- ---------------------------------\n"));
 
     for (i=0;i<nconv;i++) {
       /*
@@ -220,54 +266,18 @@ int main(int argc,char **argv)
       re = kr;
       im = ki;
 #endif
-      if (im!=0.0) PetscCall(PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error));
-      else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g\n",(double)re,(double)error));
 
       /*
-       * Get eigenvector
+       * Get Spin S2 value
        */
-      Vec vi, vr;
-      BV V;
-      PetscReal norm;
-      PetscReal *values;
-      int sbx = 0, pos1 = 1, pos2 = 4;
-      PetscReal xymat = 0.0;
-      PetscReal xymat2 = 0.0;
-      PetscReal xymat3 = 0.0;
-      PetscReal xymat4 = 0.0;
-      PetscReal weight3 = 0.0;
-      PetscReal norm2 = 0.0;
-      PetscReal norm3 = 0.0;
-      PetscReal norm4 = 0.0;
-      EPSGetBV(eps,&V);
-      BVGetColumn(V,i,&vi);
-      VecNorm(vi,NORM_2,&norm);
-      VecGetArray(vi, &values);
-      norm = 0.0;
-      get_s2(values, &Istart, &Iend, values, &num_vertices, &norm, &norm2, &norm3, &norm4, &xymat, &xymat2, &xymat3, &xymat4, &weight3,
-             &sbx, &sbx, &sbx, &sbx, &sbx, &sbx,
-             &sbx, &sbx, &sbx, &sbx,
-             &sbx, &sbx, &pos1, &pos2, &pos1, num_vertices, configAlpha, sizeAlpha, configBeta, sizeBeta);
-      MPI_Reduce(&xymat, &xymatfin, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
-      MPI_Reduce(&norm, &normfin, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"norm = %10.5f xymat = %10.5f\n",normfin,xymatfin));
-      VecRestoreArray(vi, &values);
-      BVRestoreColumn(V,i,&vi);
+      PetscCall(MatMult(S2, xr, vs2));
+      PetscCall(VecDot(xr, vs2, &dot));
+
+      if (im!=0.0) PetscCall(PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error));
+      else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g       %12f\n",(double)re,(double)error,(double)abs(dot)));
     }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
   }
-  //printf(" %d \n",calculate(7, 7));
-  //int ideter[num_vertices], addr;
-  //getdet(1, ideter, configAlpha, sizeAlpha, configBeta, sizeBeta, num_vertices);
-  //printf("\n");
-  //for( int i=0;i<num_vertices;++i ) {
-  //  printf(" %d ",ideter[i]);
-  //}
-  //adr (ideter, &addr, configAlpha, sizeAlpha, configBeta, sizeBeta, num_vertices);
-  //printf("\n\n %d \n",addr);
-
-  //igraph_vector_destroy(&alphaDeterminants);
-  //igraph_vector_destroy(&alphaMEs);
 
   // Don't forget to destroy the graph when you're done.
   igraph_destroy(&graph);
@@ -291,6 +301,7 @@ int main(int argc,char **argv)
   PetscCall(MatDestroy(&A));
   PetscCall(VecDestroy(&xr));
   PetscCall(VecDestroy(&xi));
+  PetscCall(VecDestroy(&vs2));
   PetscCall(SlepcFinalize());
   return 0;
 }
