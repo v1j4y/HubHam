@@ -94,7 +94,7 @@ int getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) {
 }
 
 // Function to generate all possible alpha determinants
-void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs) {
+void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, size_t betaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs, int alphaBeta) {
     // Get the number of orbitals
     size_t norb = igraph_vcount(graph);
     int phase = 1;
@@ -118,8 +118,28 @@ void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t*
                     size_t newAlphaConfig = alphaConfig ^ ((1 << i) | (1 << orbital_id));
 
                     // Find the phase
-                    phase = getPhase(alphaConfig, newAlphaConfig, i+1, orbital_id+1);
+                    size_t alphabetadet = alphaConfig ^ betaConfig;
+                    alphabetadet = alphabetadet & ~((size_t)1 << (orbital_id));
+                    size_t newalphabetadet = newAlphaConfig ^ betaConfig;
+                    newalphabetadet = newalphabetadet & ~((size_t)1 << (i));
+                    phase = getPhase(alphabetadet, newalphabetadet, i+1, orbital_id+1);
                     phase = phase & 1 == 1 ? -1 : 1;
+                    if(alphaBeta == 0) {
+                        if ( orbital_id > i ) {
+                            if( ((betaConfig >> i) & 1) == 1) phase *= -1;
+                        }
+                        else {
+                            if( ((betaConfig >> orbital_id) & 1) == 1) phase *= -1;
+                        }
+                    }
+                    else {
+                        if ( orbital_id > i ) {
+                            if( ((betaConfig >> orbital_id) & 1) == 1) phase *= -1;
+                        }
+                        else {
+                            if( ((betaConfig >> i) & 1) == 1) phase *= -1;
+                        }
+                    }
 
                     // Find the position of the new alpha determinant in the list and add it to alphaDeterminants
                     size_t pos;
@@ -161,7 +181,7 @@ void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph
         igraph_vector_t alphaMEs;
         igraph_vector_init(&alphaMEs, 0);
 
-        generateDeterminants(configAlpha, sizeAlpha, graph, alphaConfigs[i], &alphaDeterminants, &alphaMEs);
+        generateDeterminants(configAlpha, sizeAlpha, graph, alphaConfigs[i], 0, &alphaDeterminants, &alphaMEs, 1);
 
         for (size_t j = 0; j < igraph_vector_size(&alphaDeterminants); ++j) {
             igraph_vector_push_back(allAlphaDeterminants, VECTOR(alphaDeterminants)[j]);
@@ -184,12 +204,12 @@ void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jde
     igraph_vector_init(&alphaDeterminants, 0);
     igraph_vector_t alphaMEs;
     igraph_vector_init(&alphaMEs, 0);
-    generateDeterminants(configAlpha, sizeAlpha, graph, configAlpha[alphaID], &alphaDeterminants, &alphaMEs);
+    generateDeterminants(configAlpha, sizeAlpha, graph, configAlpha[alphaID], configBeta[betaID], &alphaDeterminants, &alphaMEs, 1);
     igraph_vector_t betaDeterminants;
     igraph_vector_init(&betaDeterminants, 0);
     igraph_vector_t betaMEs;
     igraph_vector_init(&betaMEs, 0);
-    generateDeterminants(configBeta, sizeBeta, graph, configBeta[betaID], &betaDeterminants, &betaMEs);
+    generateDeterminants(configBeta, sizeBeta, graph, configBeta[betaID], configAlpha[alphaID], &betaDeterminants, &betaMEs, 0);
 
     for (size_t j = 0; j < igraph_vector_size(&alphaDeterminants); ++j) {
         size_t alphaJ = VECTOR(alphaDeterminants)[j];
@@ -296,4 +316,45 @@ void save_matrix(int** matrix, int rows, int cols, char* filename) {
 
     // Close the file
     fclose(file);
+}
+
+// A function to calculate the number of set bits in a before each bit of b
+int calculate (int a, int b) {
+    // Initialize the count of set bits in a
+    int count = popcnt (a) - 1;
+
+    // Initialize the result array
+    int* result = (int*) malloc (32 * sizeof (int));
+
+    // Initialize the mask variable
+    int m = 1;
+    int phase = 0;
+
+    // Initialize the index variable
+    int i = 0;
+
+    // Loop through each bit of b from right to left
+    while (b) {
+        // Append the current count to the result array
+        phase += count;
+        i++;
+        printf(" %d (%d) ",b, m);
+
+        // If the current bit of b is 1, then decrement the count by 1 if the corresponding bit of a is also 1
+        if (b & 1) {
+            if (a & m) {
+                count--;
+            }
+        }
+
+        // Left-shift the mask variable by 1
+        m = m | (m << 1);
+
+        // Right-shift b by 1
+        b >>= 1;
+    }
+    printf("\n");
+
+    // Return the result array
+    return phase;
 }

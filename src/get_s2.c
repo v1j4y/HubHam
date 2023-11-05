@@ -8,11 +8,11 @@
 #include "get_s2.h"
 #include "hubbard.h"
 
-void getdet(long int iii, int *ideter, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) {
+int getdet(long int iii, int *ideter, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) {
     //Find alpha and beta ids
     //printf(" In getdet %d\n",iii);
-    size_t alphaID = findAlphaID(iii-1, sizeAlpha, sizeBeta);
-    size_t betaID  = findBetaID(iii-1, sizeAlpha, sizeBeta);
+    size_t alphaID = findAlphaID(iii, sizeAlpha, sizeBeta);
+    size_t betaID  = findBetaID(iii, sizeAlpha, sizeBeta);
     size_t alphadet = configAlpha[alphaID];
     size_t betadet = configBeta[betaID];
     //printf(" %ld %ld ",alphadet,betadet);
@@ -31,9 +31,11 @@ void getdet(long int iii, int *ideter, size_t* configAlpha, long int sizeAlpha, 
       //printf("%d \n",betadet & (1<<i));
       ideter[i] = occv[occ];
     }
+    int phase = 1;//find_permutations_and_phase(alphadet, betadet) ;
+    return phase;
 }
 
-void adr (int *ideter, long int *iii, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) {
+int adr (int *ideter, long int *iii, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) {
     int occ = 0;
     size_t alphadet = 0;
     size_t betadet = 0;
@@ -60,6 +62,8 @@ void adr (int *ideter, long int *iii, size_t* configAlpha, long int sizeAlpha, s
     findPositions(configBeta , sizeBeta , &betadet , 1, &posb);
     size_t foundGlobalID = findGlobalID(posa, posb, sizeAlpha);
     iii[0] = foundGlobalID;
+    int phase = 1;//find_permutations_and_phase(alphadet, betadet) ;
+    return phase;
 }
 
 /* 
@@ -88,6 +92,10 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
   int			 ideter2[natomax];
   int 		   	 kko,kok,kkio;
   long int       ii;
+  double         nxmat=0.0;
+  double         nxmat2=0.0;
+  double         nxmat3=0.0;
+  double         nxmat4=0.0;
   double         xmat=0.0;
   double         xmat2=0.0;
   double         xmat3=0.0;
@@ -109,8 +117,14 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
   MPI_Comm_rank(MPI_COMM_WORLD,&mpiid);
 //if(!mpiid){printf("istart= %d ind = %d\n",*Istart,*Iend);}
 //ierr = PetscTime(&tt1);CHKERRQ(ierr);
+  	  //for(ii=*Istart;ii<*Iend;ii++) {
+      //  iii = ii + 0;
+      //  int phase = getdet (iii, ideter, configAlpha, sizeAlpha, configBeta,  sizeBeta, *natom);
+      //  for(kkio=0;kkio<4;++kkio) printf(" %d ",ideter[kkio]);
+      //  printf("| %d %d\n",iii, phase);
+  	  //}
   	  for(ii=*Istart;ii<*Iend;ii++) {
-              iii = ii + 1;
+              iii = ii + 0;
 //            iiii = ii-*Istart;
               iiii = ii;
               xmat = 0.0;
@@ -126,7 +140,7 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
               pos1 = 0;
               pos2 = 0;
               pos3 = 0;
-              getdet (iii, ideter, configAlpha, sizeAlpha, configBeta,  sizeBeta, *natom);
+              int phase = getdet (iii, ideter, configAlpha, sizeAlpha, configBeta,  sizeBeta, *natom);
               *norm=*norm+valxr[iiii]*valxr[iiii];
               for(kko=*s21a1;kko<=*s21a2;kko++){
                   if(ideter[kko]==3){
@@ -173,10 +187,17 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
               if(countw==0 && okboit1){
                   *weight3 += (valxr[iiii]*valxr[iiii]);
               }
+              countw = 0;
+              for(kko=0;kko<*natom;++kko) {
+                if(ideter[kko] == 1 || ideter[kko] == 2){
+                  countw = 1;
+                }
+              }
+              if(countw == 1) nxmat += valxr[iiii]*valxr[iiii];
               for(kko=0;kko<=(*natom/2)-1;kko++){
                   for(kok=kko;kok<=(*natom/2)-1;kok++){
                     if(kok == kko && ideter[kok] != 3){
-                      xmat=xmat+(3.0/4.0)*(valxr[iiii]*valxr[iiii]);
+                      if(ideter[kko] != 4) xmat=xmat+(3.0/4.0)*(valxr[iiii]*valxr[iiii]);
                       if(okboit1){
                         if( kko >=*s21a1 && kko <=*s21a2){
                           if( kok >=*s21a1 && kok <=*s21a2){
@@ -276,11 +297,13 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=2;
                         ideter2[kok]=1;
-                        adr (ideter2, &iaa2,
+                        int phase2 = adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
-                        iaa2 = iaa2 - 1;
+                        //iaa2 = iaa2 - 1;
                         xmat=xmat+valxr[iiii]*valxr[iaa2];
+                        //for(kkio=0;kkio<*natom;++kkio) printf(" %d ",ideter[kkio]);
+                        //printf(" | %d  : %d \n",iii, iaa2);
                         if(okboit1){
                           if( kko >=*s21a1 && kko <=*s21a2){
                             if( kok >=*s21a1 && kok <=*s21a2){
@@ -331,10 +354,10 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=1;
                         ideter2[kok]=2;
-                        adr (ideter2, &iaa2,
+                        int phase2 = adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
-                        iaa2 = iaa2 - 1;
+                        //iaa2 = iaa2 - 1;
                         xmat=xmat+valxr[iiii]*valxr[iaa2];
                         if(okboit1){
                           if( kko >=*s21a1 && kko <=*s21a2){
@@ -357,14 +380,14 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                             }
                           }
                         }
-                       }
+                      }
                     }
                 }
               }
               for(kko=(*natom/2);kko<=*natom-1;kko++){
                   for(kok=kko;kok<=*natom-1;kok++){
                     if(kok == kko && ideter[kok] != 3){
-                      xmat=xmat+(3.0/4.0)*(valxr[iiii]*valxr[iiii]);
+                      if(ideter[kko] != 4) xmat=xmat+(3.0/4.0)*(valxr[iiii]*valxr[iiii]);
                       if(okboit1){
                         if( kko >=*s21b1 && kko <=*s21b2){
                           if( kok >=*s21b1 && kok <=*s21b2){
@@ -390,21 +413,21 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                     else{
                       if(ideter[kko] == 1 && ideter[kok] == 1){
                         xmat=xmat+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                      if(okboit1){
-                        if( kko >=*s21b1 && kko <=*s21b2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22b1 && kko <=*s22b2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21b1 && kko <=*s21b2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22b1 && kko <=*s22b2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23b1 && kko <=*s23b2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
@@ -414,21 +437,21 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                       }
                       if(ideter[kko] == 2 && ideter[kok] == 2){
                         xmat=xmat+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                      if(okboit1){
-                        if( kko >=*s21b1 && kko <=*s21b2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22b1 && kko <=*s22b2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21b1 && kko <=*s21b2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22b1 && kko <=*s22b2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23b1 && kko <=*s23b2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
@@ -438,21 +461,21 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                       }
                       if(ideter[kko] == 1 && ideter[kok] == 2){
                         xmat=xmat-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                      if(okboit1){
-                        if( kko >=*s21b1 && kko <=*s21b2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22b1 && kko <=*s22b2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21b1 && kko <=*s21b2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22b1 && kko <=*s22b2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23b1 && kko <=*s23b2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
@@ -464,26 +487,28 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=2;
                         ideter2[kok]=1;
-                        adr (ideter2, &iaa2,
+                        int phase2 = adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
-                        iaa2 = iaa2 - 1;
+                        //iaa2 = iaa2 - 1;
+                        //for(kkio=0;kkio<4;++kkio) printf(" %d ",ideter[kkio]);
+                        //printf(" | %d  : %d \n",iii, iaa2);
                         xmat=xmat+valxr[iiii]*valxr[iaa2];
-                      if(okboit1){
-                        if( kko >=*s21b1 && kko <=*s21b2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2+(valxr[iiii]*valxr[iaa2]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22b1 && kko <=*s22b2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3+(valxr[iiii]*valxr[iaa2]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21b1 && kko <=*s21b2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2+(valxr[iiii]*valxr[iaa2]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22b1 && kko <=*s22b2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3+(valxr[iiii]*valxr[iaa2]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23b1 && kko <=*s23b2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4+(valxr[iiii]*valxr[iaa2]);
@@ -493,21 +518,21 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                       }
                       if(ideter[kko] == 2 && ideter[kok] == 1){
                         xmat=xmat-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                      if(okboit1){
-                        if( kko >=*s21b1 && kko <=*s21b2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22b1 && kko <=*s22b2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21b1 && kko <=*s21b2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22b1 && kko <=*s22b2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23b1 && kko <=*s23b2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
@@ -519,40 +544,40 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=1;
                         ideter2[kok]=2;
-                        adr (ideter2, &iaa2,
+                        int phase2 = adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
-                        iaa2 = iaa2 - 1;
+                        //iaa2 = iaa2 - 1;
                         xmat=xmat+valxr[iiii]*valxr[iaa2];
-                      if(okboit1){
-                        if( kko >=*s21b1 && kko <=*s21b2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2+(valxr[iiii]*valxr[iaa2]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22b1 && kko <=*s22b2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3+(valxr[iiii]*valxr[iaa2]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21b1 && kko <=*s21b2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2+(valxr[iiii]*valxr[iaa2]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22b1 && kko <=*s22b2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3+(valxr[iiii]*valxr[iaa2]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23b1 && kko <=*s23b2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4+(valxr[iiii]*valxr[iaa2]);
                           }
                         }
                       }
-                       }
+                      }
                     }
                 }
               }
               for(kko=0;kko<=(*natom/2)-1;kko++){
                   for(kok=(*natom/2);kok<=*natom-1;kok++){
                     if(kok == kko && ideter[kok] != 3){
-                      xmat=xmat+(3.0/4.0)*(valxr[iiii]*valxr[iiii]);
+                      if(ideter[kko] != 4) xmat=xmat+(3.0/4.0)*(valxr[iiii]*valxr[iiii]);
                       if(okboit1){
                         if( kko >=*s21a1 && kko <=*s21a2){
                           if( kok >=*s21b1 && kok <=*s21b2){
@@ -578,21 +603,21 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                     else{
                       if(ideter[kko] == 1 && ideter[kok] == 1){
                         xmat=xmat+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                      if(okboit1){
-                        if( kko >=*s21a1 && kko <=*s21a2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22a1 && kko <=*s22a2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21a1 && kko <=*s21a2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22a1 && kko <=*s22a2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23a1 && kko <=*s23a2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
@@ -602,21 +627,21 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                       }
                       if(ideter[kko] == 2 && ideter[kok] == 2){
                         xmat=xmat+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                      if(okboit1){
-                        if( kko >=*s21a1 && kko <=*s21a2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22a1 && kko <=*s22a2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21a1 && kko <=*s21a2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22a1 && kko <=*s22a2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23a1 && kko <=*s23a2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4+(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
@@ -626,21 +651,21 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                       }
                       if(ideter[kko] == 1 && ideter[kok] == 2){
                         xmat=xmat-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                      if(okboit1){
-                        if( kko >=*s21a1 && kko <=*s21a2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22a1 && kko <=*s22a2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21a1 && kko <=*s21a2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22a1 && kko <=*s22a2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23a1 && kko <=*s23a2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
@@ -652,26 +677,26 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=2;
                         ideter2[kok]=1;
-                        adr (ideter2, &iaa2,
+                        int phase2 = adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
-                        iaa2 = iaa2 - 1;
+                        //iaa2 = iaa2 - 1;
                         xmat=xmat+valxr[iiii]*valxr[iaa2];
-                      if(okboit1){
-                        if( kko >=*s21a1 && kko <=*s21a2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2+(valxr[iiii]*valxr[iaa2]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22a1 && kko <=*s22a2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3+(valxr[iiii]*valxr[iaa2]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21a1 && kko <=*s21a2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2+(valxr[iiii]*valxr[iaa2]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22a1 && kko <=*s22a2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3+(valxr[iiii]*valxr[iaa2]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23a1 && kko <=*s23a2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4+(valxr[iiii]*valxr[iaa2]);
@@ -681,21 +706,21 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                       }
                       if(ideter[kko] == 2 && ideter[kok] == 1){
                         xmat=xmat-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                      if(okboit1){
-                        if( kko >=*s21a1 && kko <=*s21a2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22a1 && kko <=*s22a2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21a1 && kko <=*s21a2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22a1 && kko <=*s22a2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23a1 && kko <=*s23a2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4-(1.0/2.0)*(valxr[iiii]*valxr[iiii]);
@@ -707,34 +732,35 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                         }
                         ideter2[kko]=1;
                         ideter2[kok]=2;
-                        adr (ideter2, &iaa2,
+                        int phase2 = adr (ideter2, &iaa2,
                              configAlpha, sizeAlpha,
                              configBeta,  sizeBeta, *natom);
-                        iaa2 = iaa2 - 1;
-//                      if(!mpiid){if(iaa2 > *Iend || iaa2 < *Istart)printf("out iaa2 = %d\n",iaa2);}
+                        //iaa2 = iaa2 - 1;
+                        //for(kkio=0;kkio<4;++kkio) printf(" %d ",ideter[kkio]);
+                        //printf(" | %d  : %d \n",iii, iaa2);
                         xmat=xmat+valxr[iiii]*valxr[iaa2];
-                      if(okboit1){
-                        if( kko >=*s21a1 && kko <=*s21a2){
-                          if( kok >=*s21b1 && kok <=*s21b2){
-                                xmat2=xmat2+(valxr[iiii]*valxr[iaa2]);
-                          }
-                        }
-                      }
-                      if(okboit2){
-                        if( kko >=*s22a1 && kko <=*s22a2){
-                          if( kok >=*s22b1 && kok <=*s22b2){
-                                xmat3=xmat3+(valxr[iiii]*valxr[iaa2]);
-                          }
-                        }
-                      }
-                      if(okboit3){
+                        if(okboit1){
+                         if( kko >=*s21a1 && kko <=*s21a2){
+                           if( kok >=*s21b1 && kok <=*s21b2){
+                                 xmat2=xmat2+(valxr[iiii]*valxr[iaa2]);
+                           }
+                         }
+                             }
+                        if(okboit2){
+                         if( kko >=*s22a1 && kko <=*s22a2){
+                           if( kok >=*s22b1 && kok <=*s22b2){
+                                 xmat3=xmat3+(valxr[iiii]*valxr[iaa2]);
+                           }
+                         }
+                             }
+                        if(okboit3){
                         if( kko >=*s23a1 && kko <=*s23a2){
                           if( kok >=*s23b1 && kok <=*s23b2){
                                 xmat4=xmat4+(valxr[iiii]*valxr[iaa2]);
                           }
                         }
                       }
-                       }
+                      }
                     }
                   }
                 }
@@ -742,12 +768,11 @@ void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *n
                 *xymat2=*xymat2+xmat2;
                 *xymat3=*xymat3+xmat3;
                 *xymat4=*xymat4+xmat4;
-//              if(mpiid==0)printf(" ii = %d norm = %18f %18f 3 = %18f 4 = %18f\n", ii, *norm2, *norm3, *xymat2, *xymat3);
-//              printf(" %d) ii = %d norm = %18f xymat = %18f 3 = %18f 4 = %18f\n",mpiid, ii, *norm, *xymat, *norm3, *xymat2, *xymat3);
           }
 
+  *xymat = *xymat/nxmat;
   ierr = PetscTime(&tt2);
 //printf(" norm = %18f weight = %18f weight/N = %18f tmpwe = %18f\n", *norm2, *weight3, *weight3/(*norm2),tmpwe);
-printf(" norm = %18f %18f %18f %18f xymat = %18f %18f %18f %18f | %d %d %d %d %d\n", *norm, *norm2, *norm3, *norm4, *xymat, *xymat2, *xymat3, *xymat4, *s21a1, *s21a2, *s21b1, *s21b2, *postrou1);
+//printf(" norm = %18f %18f %18f %18f xymat = %18f %18f %18f %18f | %d %d %d %d %d\n", *norm, nxmat, *norm3, *norm4, *xymat, *xymat2, *xymat3, *xymat4, *s21a1, *s21a2, *s21b1, *s21b2, *postrou1);
 //ierr = PetscPrintf(PETSC_COMM_WORLD," Time used for the s2 loop: %f\n",tt2-tt1);CHKERRQ(ierr);
 }

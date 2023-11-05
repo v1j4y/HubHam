@@ -35,7 +35,7 @@ void printPositions(size_t* positions, size_t size) ;
 int getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) ;
 
 // Function to generate all possible alpha determinants
-void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs) ;
+void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, size_t betaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs, int alphaBeta) ;
 
 // Function to generate all possible alpha determinants given a list of alpha determinants
 void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, size_t numConfigs, igraph_vector_t* allAlphaDeterminants) ;
@@ -53,3 +53,6 @@ int** declare_matrix(int rows, int cols) ;
 
 // A function to save a matrix in a file in CSV format
 void save_matrix(int** matrix, int rows, int cols, char* filename) ;
+
+// A function to find the number of permutations and the phase for a given pair of bit strings
+int calculate (int a, int b) ;

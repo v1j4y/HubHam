@@ -30,7 +30,7 @@ int main(int argc,char **argv)
   PetscReal normfin;
   PetscReal xymatfin = 0.0;
 
-  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/graphm3.graphml";
+  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/c4h6.graphml";
   FILE* graphmlFile = fopen(graphmlFileName, "r");
 
   if (graphmlFile == NULL) {
@@ -67,7 +67,7 @@ int main(int argc,char **argv)
 
   // Declare a matrix of size 3 x 4
   int rows = sizeAlpha * sizeBeta;
-  int cols = sizeAlpha * sizeBeta;
+  int cols = rows;
   int** matrix = declare_matrix(rows, cols);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -109,7 +109,7 @@ int main(int argc,char **argv)
 
     int diag = getHubbardDiag(i, configAlpha, sizeAlpha, configBeta, sizeBeta);
     PetscCall(MatSetValue(A,i,i,(double)diag,INSERT_VALUES));
-    //matrix[i][i] = (double)diag*U;
+    matrix[i][i] = (double)diag*U;
     getAllHubbardMEs(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph);
     for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
       int Jid = VECTOR(Jdetlist)[j];
@@ -160,7 +160,7 @@ int main(int argc,char **argv)
   PetscCall(EPSSetTolerances(eps,tol,maxit));
   ncv  = 9;
   mpd  = 10;
-  nev  = 2;
+  nev  = 80;
   PetscCall(EPSSetDimensions(eps,nev,PETSC_DECIDE,PETSC_DECIDE));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -248,9 +248,6 @@ int main(int argc,char **argv)
              &sbx, &sbx, &sbx, &sbx, &sbx, &sbx,
              &sbx, &sbx, &sbx, &sbx,
              &sbx, &sbx, &pos1, &pos2, &pos1, num_vertices, configAlpha, sizeAlpha, configBeta, sizeBeta);
-      //for(int j=Istart;j<Iend;++j){
-      //  norm += values[j]*values[j];
-      //}
       MPI_Reduce(&xymat, &xymatfin, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
       MPI_Reduce(&norm, &normfin, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
       PetscCall(PetscPrintf(PETSC_COMM_WORLD,"norm = %10.5f xymat = %10.5f\n",normfin,xymatfin));
@@ -259,8 +256,9 @@ int main(int argc,char **argv)
     }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
   }
+  //printf(" %d \n",calculate(7, 7));
   //int ideter[num_vertices], addr;
-  //getdet(10, ideter, configAlpha, sizeAlpha, configBeta, sizeBeta, num_vertices);
+  //getdet(1, ideter, configAlpha, sizeAlpha, configBeta, sizeBeta, num_vertices);
   //printf("\n");
   //for( int i=0;i<num_vertices;++i ) {
   //  printf(" %d ",ideter[i]);

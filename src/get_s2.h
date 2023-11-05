@@ -4,8 +4,8 @@
 #include <ctype.h>
 #include <string.h>
 
-void getdet(long int iii, int *ideter, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) ;
-void adr (int *ideter, long int *iii, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) ;
+int getdet(long int iii, int *ideter, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) ;
+int adr (int *ideter, long int *iii, size_t* configAlpha, long int sizeAlpha, size_t* configBeta, long int sizeBeta, int norb) ;
 
 void get_s2(Vec xr, PetscInt *Istart, PetscInt *Iend, PetscScalar *valxr, int *natom,
         PetscReal *norm, PetscReal *norm2, PetscReal *norm3, PetscReal *norm4,
