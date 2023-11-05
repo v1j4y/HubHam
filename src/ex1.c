@@ -31,7 +31,14 @@ int main(int argc,char **argv)
   PetscReal normfin;
   PetscReal xymatfin = 0.0;
 
-  const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/graphm3.graphml";
+  PetscFunctionBeginUser;
+  PetscCall(SlepcInitialize(&argc,&argv,(char*)0,help));
+
+  //const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/graphm3.graphml";
+  char        graphmlFileName[PETSC_MAX_PATH_LEN]; /* input file name */
+  PetscBool       flg;
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-f", graphmlFileName, sizeof(graphmlFileName), &flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate binary file with the -f option");
   FILE* graphmlFile = fopen(graphmlFileName, "r");
 
   if (graphmlFile == NULL) {
@@ -86,9 +93,6 @@ int main(int argc,char **argv)
   PetscInt       n=sizeAlpha*sizeBeta,i,Istart,Iend,nev,maxit,its,nconv;
   PetscInt		   ncv, mpd;
 
-  PetscFunctionBeginUser;
-  PetscCall(SlepcInitialize(&argc,&argv,(char*)0,help));
-
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Laplacian Eigenproblem, n=%" PetscInt_FMT "\n\n",n));
   PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
@@ -102,8 +106,8 @@ int main(int argc,char **argv)
     */
   PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
   PetscCall(MatSetSizes(S2,PETSC_DECIDE,PETSC_DECIDE,n,n));
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,2*num_vertices,NULL,2*num_vertices,NULL,&S2));
-  PetscCall(MatMPIAIJSetPreallocation(S2,2*num_vertices,NULL,2*num_vertices,NULL));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,3*num_vertices,NULL,3*num_vertices,NULL,&S2));
+  PetscCall(MatMPIAIJSetPreallocation(S2,3*num_vertices,NULL,3*num_vertices,NULL));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of configurations alpha = %ld, beta = %ld\n",sizeAlpha,sizeBeta));
@@ -157,7 +161,7 @@ int main(int argc,char **argv)
     getS2Operator(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph, num_vertices, natomax);
     for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
       int Jid = VECTOR(Jdetlist)[j];
-      matrix[i][Jid] = VECTOR(MElist)[j];
+      //matrix[i][Jid] = VECTOR(MElist)[j];
       //printf(" %d %10.5f \n",Jid, VECTOR(MElist)[j]);
       PetscCall(MatSetValue(S2,i,Jid,t*(double)VECTOR(MElist)[j],INSERT_VALUES));
     }
@@ -180,7 +184,7 @@ int main(int argc,char **argv)
   PetscCall(MatCreateVecs(A,NULL,&vs2));
 
   // Save file
-  save_matrix(matrix, rows, cols, "/tmp/benzene_c.csv");
+  //save_matrix(matrix, rows, cols, "/tmp/benzene_c.csv");
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 Create the eigensolver and set various options
