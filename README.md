@@ -28,9 +28,9 @@ density matrices.
 _Dependencies_
 ---------------
 
-  1. [PETSc](https://www.mcs.anl.gov/petsc/documentation/installation.html) and [SLEPc](http://slepc.upv.es/documentation/instal.htm)
+  1. [PETSc](https://www.mcs.anl.gov/petsc/documentation/installation.html) 
 
-  2. [IRPF90](https://github.com/scemama/irpf90)
+  2. [SLEPc](http://slepc.upv.es/documentation/instal.htm)
 
 _Compiling_
 ------------
