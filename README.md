@@ -32,6 +32,8 @@ _Dependencies_
 
   2. [SLEPc](http://slepc.upv.es/documentation/instal.htm)
 
+  3. [IGraph](http://igraph.org/c/)
+
 _Compiling_
 ------------
 
