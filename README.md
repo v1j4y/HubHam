@@ -57,8 +57,8 @@ _Using HubHam_
 ---------------
 
   1. The HubHam program requires an input file which 
-   has is in the ~graphml~ format. A few sample files
-   have been provided in the ~data/~ directory.
+   has is in the `graphml` format. A few sample files
+   have been provided in the `data/` directory.
 
 
   2. running HubHam
