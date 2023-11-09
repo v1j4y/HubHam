@@ -77,7 +77,7 @@ int main(int argc,char **argv)
   // Declare a matrix of size 3 x 4
   int rows = sizeAlpha * sizeBeta;
   int cols = rows;
-  double** matrix = declare_matrix(rows, cols);
+  //double** matrix = declare_matrix(rows, cols);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Define Hamiltonian
@@ -106,8 +106,8 @@ int main(int argc,char **argv)
     */
   PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
   PetscCall(MatSetSizes(S2,PETSC_DECIDE,PETSC_DECIDE,n,n));
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,3*num_vertices,NULL,3*num_vertices,NULL,&S2));
-  PetscCall(MatMPIAIJSetPreallocation(S2,3*num_vertices,NULL,3*num_vertices,NULL));
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,4*num_vertices,NULL,4*num_vertices,NULL,&S2));
+  PetscCall(MatMPIAIJSetPreallocation(S2,4*num_vertices,NULL,4*num_vertices,NULL));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of configurations alpha = %ld, beta = %ld\n",sizeAlpha,sizeBeta));

@@ -46,7 +46,7 @@ void generateConfigurations(size_t norb, size_t nelec, size_t* configAll, size_t
     *size = 0;
 
     for (size_t i = 0; i < (1 << norb); ++i) {
-        if (__builtin_popcount(i) == nelec) {
+        if (popcnt (i) == nelec) {
             configAll[(*size)++] = i;
         }
     }
