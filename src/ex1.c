@@ -1,16 +1,15 @@
 /*
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   SLEPc - Scalable Library for Eigenvalue Problem Computations
-   Copyright (c) 2002-, Universitat Politecnica de Valencia, Spain
+   Hubbard Hamiltonian - A high-performance Exact diagonalization program
 
-   This file is part of SLEPc.
-   SLEPc is distributed under a 2-clause BSD license (see LICENSE).
+   Copyright (c) 2023-, Vijay Gopal CHILKURI
+   LICENCE : GNU GPL V2
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 */
 
-static char help[] = "Standard symmetric eigenproblem corresponding to the Laplacian operator in 1 dimension.\n\n"
+static char help[] = "Standard Hubbard eigenproblem corresponding to the topology given in the file.\n\n"
   "The command line options are:\n"
-  "  -n <n>, where <n> = number of grid subdivisions = matrix dimension.\n\n";
+  "  -f <file>, where <file> = name of the graphml file.\n\n";
 
 #include <slepceps.h>
 
@@ -94,7 +93,9 @@ int main(int argc,char **argv)
   PetscInt		   ncv, mpd;
 
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n1-D Laplacian Eigenproblem, n=%" PetscInt_FMT "\n\n",n));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"==========================================="));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\nHubHam: Hubbard Eigenproblem, n=%" PetscInt_FMT "\n",n));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"===========================================\n\n"));
   PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
   PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,3*num_vertices,NULL,3*num_vertices,NULL,&A));
@@ -306,6 +307,9 @@ int main(int argc,char **argv)
   PetscCall(VecDestroy(&xr));
   PetscCall(VecDestroy(&xi));
   PetscCall(VecDestroy(&vs2));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"===========================================\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"HubHam: Success !!!                      \n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"===========================================\n"));
   PetscCall(SlepcFinalize());
   return 0;
 }
