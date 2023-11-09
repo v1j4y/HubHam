@@ -25,6 +25,9 @@ output of the program are the energies and the various observables such as
 the total Spin, various Spin-Spin correlation functions, and one-and two-body
 density matrices.
 
+Note: Caluculation of S2 can be deactivated to save memory and perform 
+larger matrix diagonalizations.
+
 _Dependencies_
 ---------------
 
