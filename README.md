@@ -34,6 +34,8 @@ _Dependencies_
 
   3. [IGraph](http://igraph.org/c/)
 
+  4. [slaterlib](http://github.com/scemama/slaterlib)
+
 _Compiling_
 ------------
 
