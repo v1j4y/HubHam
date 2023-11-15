@@ -69,7 +69,7 @@ _Using HubHam_
   2. running HubHam
 
 ```shell
-mpiexec -n [nprocs] ./bin/ex1 -eps_nev 10 -f "data/c8h8_mma.graphml" 
+mpiexec -n [nprocs] ./bin/ex1 -eps_nev 10 -f data/c8h8_mma.graphml 
 ```
 
 _Publications using this code_
