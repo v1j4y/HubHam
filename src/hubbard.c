@@ -105,12 +105,12 @@ void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t*
         // Check if the orbital is occupied
         if ((alphaConfig >> i) & 1) {
             // Get the connected vertices
-            igraph_vector_t orbital_id_allowed;
-            igraph_vector_init(&orbital_id_allowed, 0);
-            getConnectedVertices(graph, i, &orbital_id_allowed);
+            igraph_vector_int_t orbital_id_allowed;
+            igraph_vector_int_init(&orbital_id_allowed, 0);
+            getConnectedVertices(graph, (igraph_integer_t)i, &orbital_id_allowed);
 
             // Loop over each connected vertex
-            for (size_t j = 0; j < igraph_vector_size(&orbital_id_allowed); ++j) {
+            for (size_t j = 0; j < igraph_vector_int_size(&orbital_id_allowed); ++j) {
                 size_t orbital_id = VECTOR(orbital_id_allowed)[j];
 
                 // Check if the connected vertex is unoccupied
@@ -154,7 +154,7 @@ void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t*
                 }
             }
 
-            igraph_vector_destroy(&orbital_id_allowed);
+            igraph_vector_int_destroy(&orbital_id_allowed);
         }
     }
 }

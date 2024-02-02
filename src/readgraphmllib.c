@@ -9,6 +9,6 @@ int readGraphMLFile(FILE* file, igraph_t* graph) {
     return 1;  // Successful graph read.
 }
 
-void getConnectedVertices(const igraph_t* graph, igraph_integer_t vertex_id, igraph_vector_t* result) {
+void getConnectedVertices(const igraph_t* graph, igraph_integer_t vertex_id, igraph_vector_int_t* result) {
     igraph_neighbors(graph, result, vertex_id, IGRAPH_ALL);
 }

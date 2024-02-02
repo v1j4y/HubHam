@@ -24,7 +24,8 @@ int main(int argc,char **argv)
   EPS            eps;         /* eigenproblem solver context */
   EPSType        type;
   PetscReal      error,tol,re,im;
-  PetscScalar    kr,ki, dot;
+  PetscScalar    kr,ki;
+  PetscReal      dot;
   Vec            xr,xi, vs2;
   PetscLogDouble t1,t2,tt1,tt2;
   PetscReal normfin;
@@ -96,19 +97,36 @@ int main(int argc,char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"==========================================="));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\nHubHam: Hubbard Eigenproblem, n=%" PetscInt_FMT "\n",n));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"===========================================\n\n"));
-  PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
-  PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,3*num_vertices,NULL,3*num_vertices,NULL,&A));
-  PetscCall(MatMPIAIJSetPreallocation(A,3*num_vertices,NULL,3*num_vertices,NULL));
+  // General Matrix
+  //PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
+  //PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,3*num_vertices,NULL,3*num_vertices,NULL,&A));
+  //PetscCall(MatMPIAIJSetPreallocation(A,3*num_vertices,NULL,3*num_vertices,NULL));
   //PetscCall(MatSetFromOptions(A));
   //PetscCall(MatSetUp(A));
+  // Symmetric Matrix
+  PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
+  PetscCall(MatCreateSBAIJ(PETSC_COMM_WORLD,1,PETSC_DECIDE,PETSC_DECIDE,n,n,4 + num_vertices,NULL,4 + num_vertices,NULL,&A));
+  //PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
+  PetscCall(MatSetType ( A, MATSBAIJ));
+  PetscCall(MatMPIBAIJSetPreallocation(A,1,4 + num_vertices,NULL,4 + num_vertices,NULL));
+
+  // To print the matrix
+  //PetscViewer viewer; // declare a viewer object
+  //PetscViewerASCIIGetStdout(PETSC_COMM_WORLD, &viewer); // get the standard output
+  //
   /*
    * Matrix for the S2 operator
     */
+  //PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
+  //PetscCall(MatSetSizes(S2,PETSC_DECIDE,PETSC_DECIDE,n,n));
+  //PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,4*num_vertices,NULL,4*num_vertices,NULL,&S2));
+  //PetscCall(MatMPIAIJSetPreallocation(S2,4*num_vertices,NULL,4*num_vertices,NULL));
+  // Symmetric Matrix
   PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
-  PetscCall(MatSetSizes(S2,PETSC_DECIDE,PETSC_DECIDE,n,n));
-  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,4*num_vertices,NULL,4*num_vertices,NULL,&S2));
-  PetscCall(MatMPIAIJSetPreallocation(S2,4*num_vertices,NULL,4*num_vertices,NULL));
+  PetscCall(MatCreateSBAIJ(PETSC_COMM_WORLD,1,PETSC_DECIDE,PETSC_DECIDE,n,n,12 + num_vertices,NULL,12 + num_vertices,NULL,&S2));
+  //PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
+  PetscCall(MatSetType (S2, MATSBAIJ));
+  PetscCall(MatMPIBAIJSetPreallocation(S2,1,12 + num_vertices,NULL,12 + num_vertices,NULL));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of configurations alpha = %ld, beta = %ld\n",sizeAlpha,sizeBeta));
@@ -126,13 +144,16 @@ int main(int argc,char **argv)
     igraph_vector_init(&Jdetlist, 0);
 
     int diag = getHubbardDiag(i, configAlpha, sizeAlpha, configBeta, sizeBeta);
-    PetscCall(MatSetValue(A,i,i,(double)diag,INSERT_VALUES));
-    //matrix[i][i] = (double)diag*U;
+    PetscCall(MatSetValue(A,i,i,(PetscReal)diag*U,INSERT_VALUES));
+    //matrix[i][i] = (PetscReal)diag*U;
     getAllHubbardMEs(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph);
     for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
-      int Jid = VECTOR(Jdetlist)[j];
-      //matrix[i][Jid] = t*VECTOR(MElist)[j];
-      PetscCall(MatSetValue(A,i,Jid,t*(double)VECTOR(MElist)[j],INSERT_VALUES));
+      PetscInt Jid = VECTOR(Jdetlist)[j];
+      //matrix[i][Jid] = t*(PetscReal)VECTOR(MElist)[j];
+      //matrix[Jid][i] = t*(PetscReal)VECTOR(MElist)[j];
+      if( i > Jid ) PetscCall(MatSetValue(A,Jid,i,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
+      else          PetscCall(MatSetValue(A,i,Jid,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
+      //PetscCall(MatSetValue(A,Jid,i,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
     }
 
     igraph_vector_destroy(&MElist);
@@ -147,6 +168,7 @@ int main(int argc,char **argv)
   PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
   PetscCall(PetscTime(&tt2));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to assemble the matrix: %f\n",tt2-tt1));
+  //PetscCall(MatView(A, viewer));
 
   /*
    * Initialize S2 operator
@@ -161,10 +183,12 @@ int main(int argc,char **argv)
 
     getS2Operator(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph, num_vertices, natomax);
     for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
-      int Jid = VECTOR(Jdetlist)[j];
+      PetscInt Jid = VECTOR(Jdetlist)[j];
       //matrix[i][Jid] = VECTOR(MElist)[j];
       //printf(" %d %10.5f \n",Jid, VECTOR(MElist)[j]);
-      PetscCall(MatSetValue(S2,i,Jid,t*(double)VECTOR(MElist)[j],INSERT_VALUES));
+      if( i > Jid) PetscCall(MatSetValue(S2,Jid,i,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
+      else         PetscCall(MatSetValue(S2,i,Jid,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
+      //PetscCall(MatSetValue(S2,Jid,i,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
     }
 
     igraph_vector_destroy(&MElist);
@@ -205,7 +229,7 @@ int main(int argc,char **argv)
   /*
      Set solver parameters at runtime
   */
-  tol = 1.e-9;
+  tol = 1.e-16;
   maxit = 10000000;
   PetscCall(EPSSetTolerances(eps,tol,maxit));
   //ncv  = 9;
@@ -279,7 +303,7 @@ int main(int argc,char **argv)
       PetscCall(VecDot(xr, vs2, &dot));
 
       if (im!=0.0) PetscCall(PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error));
-      else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g       %12f\n",(double)re,(double)error,(double)abs(dot)));
+      else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g       %12f\n",(double)re,(double)error,(double)fabs(dot)));
     }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
   }
