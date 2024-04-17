@@ -15,6 +15,8 @@ size_t findGlobalID(size_t alphaID, size_t betaID, size_t nalpha) ;
 size_t findAlphaID(size_t globalID, size_t nalpha, size_t nbeta) ;
 size_t findBetaID(size_t globalID, size_t nalpha, size_t nbeta) ;
 
+double solveQuad(double a, double b, double c) ;
+
 size_t get_matelem(size_t deti, size_t detj) ;
 
 void printBits(size_t num, size_t len) ;
@@ -50,6 +52,9 @@ int getHubbardDiag(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *c
 
 // Main function that generates S2 operator
 void getS2Operator(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph, int natom, int natomax) ;
+
+// Get maximum neighbors
+int getMaxNeighbors(const igraph_t* graph, size_t nsites) ;
 
 // A function to declare a matrix of given size and initialize it to 0
 double** declare_matrix(int rows, int cols) ;

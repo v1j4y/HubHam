@@ -24,8 +24,7 @@ int main(int argc,char **argv)
   EPS            eps;         /* eigenproblem solver context */
   EPSType        type;
   PetscReal      error,tol,re,im;
-  PetscScalar    kr,ki;
-  PetscReal      dot;
+  PetscScalar    kr,ki, dot, spin;
   Vec            xr,xi, vs2;
   PetscLogDouble t1,t2,tt1,tt2;
   PetscReal normfin;
@@ -46,6 +45,30 @@ int main(int argc,char **argv)
     return 1;  // Return an error code or use another error handling method.
   }
 
+  /*
+    Enter the options for the number of holes and
+    the total number of alpha electrons.
+  */
+  PetscInt  nelec;
+  PetscInt  nalpha;
+  PetscInt  DoS2 = 0;
+  PetscInt  DoTPS = 0;
+  PetscInt  DBGPrinting = 0;
+  PetscReal t_inp = -1.0;
+  PetscReal Ut_inp = 10.0;
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-ht",&t_inp,&flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate t with the -ht option");
+  PetscCall(PetscOptionsGetReal(NULL,NULL,"-hUt",&Ut_inp,&flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate U/t with the -hUt option");
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-hs2",&DoS2,&flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate whether or not to S2 with the -hs2 option (1=true, 0=false)");
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-pd",&DBGPrinting,&flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate debug printing with the -pd option");
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-ne",&nelec,&flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate the total number of e- with the -ne option");
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-na",&nalpha,&flg));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate the number of alpha e- with the -na option");
+
   igraph_t graph;
   igraph_empty(&graph, 0, IGRAPH_DIRECTED);
   igraph_integer_t num_vertices;
@@ -57,15 +80,43 @@ int main(int argc,char **argv)
 
   // Assume configAlpha and configBeta are sorted lists of all possible alpha and beta configurations
   size_t norb = num_vertices;
-  size_t nalpha = norb/2;
-  size_t nbeta = norb/2;
+  size_t nbeta = nelec - nalpha;
   int natomax = 100;
+
+  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+     Define Hamiltonian
+     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+  double U =  Ut_inp;
+  double t = t_inp;
 
   size_t sizeAlpha = binomialCoeff(norb, nalpha);
   size_t sizeBeta = binomialCoeff(norb, nbeta);
 
   size_t* configAlpha = malloc(sizeAlpha * sizeof(size_t));
   size_t* configBeta = malloc(sizeBeta * sizeof(size_t));
+  size_t sizeTotal  = sizeAlpha * sizeBeta;
+
+  int max_nbrs = getMaxNeighbors(&graph, norb);
+
+  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+     Compute the operator matrix that defines the eigensystem, Ax=kx
+     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"==========================================="));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\nHubHam: Hubbard Eigenproblem, n=%" PetscInt_FMT "\n",sizeTotal));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"===========================================\n\n"));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Info] Norbs      \t\t %" PetscInt_FMT "\n",(size_t)norb));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Info] Nalpha     \t\t %" PetscInt_FMT "\n",(size_t)nalpha));
+  if(DBGPrinting) {
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Info] Nbeta      \t\t %" PetscInt_FMT "\n",(size_t)nbeta));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Info] N(betas)  \t\t %" PetscInt_FMT "\n",sizeBeta));
+  }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Info] Max Nbrs   \t\t %" PetscInt_FMT "\n",(size_t)max_nbrs));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Info] N(alphas) \t\t %" PetscInt_FMT "\n",sizeAlpha));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Info] t          \t\t %10.5f |t| \n",(double)t_inp));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Info] U          \t\t %10.5f |t| \n",(double)Ut_inp));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Wait] Generating CSFs... \t\t \n"));
 
   generateConfigurations(norb, nalpha, configAlpha, &sizeAlpha);
   generateConfigurations(norb, nbeta, configBeta, &sizeBeta);
@@ -73,30 +124,18 @@ int main(int argc,char **argv)
   // Sort the lists for binary search
   qsort(configAlpha, sizeAlpha, sizeof(size_t), compare);
   qsort(configBeta, sizeBeta, sizeof(size_t), compare);
+  
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD," [Done] Generating CSFs !  \t\t \n"));
 
   // Declare a matrix of size 3 x 4
   int rows = sizeAlpha * sizeBeta;
   int cols = rows;
   //double** matrix = declare_matrix(rows, cols);
 
-  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-     Define Hamiltonian
-     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-  double U =  1.0;
-  double t = -1.0;
-
-  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-     Compute the operator matrix that defines the eigensystem, Ax=kx
-     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
   PetscInt       n=sizeAlpha*sizeBeta,i,Istart,Iend,nev,maxit,its,nconv;
   PetscInt		   ncv, mpd;
 
-  PetscCall(PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"==========================================="));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\nHubHam: Hubbard Eigenproblem, n=%" PetscInt_FMT "\n",n));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"===========================================\n\n"));
   // General Matrix
   //PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
   //PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,3*num_vertices,NULL,3*num_vertices,NULL,&A));
@@ -122,14 +161,19 @@ int main(int argc,char **argv)
   //PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,n,n,4*num_vertices,NULL,4*num_vertices,NULL,&S2));
   //PetscCall(MatMPIAIJSetPreallocation(S2,4*num_vertices,NULL,4*num_vertices,NULL));
   // Symmetric Matrix
-  PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
-  PetscCall(MatCreateSBAIJ(PETSC_COMM_WORLD,1,PETSC_DECIDE,PETSC_DECIDE,n,n,12 + num_vertices,NULL,12 + num_vertices,NULL,&S2));
   //PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
-  PetscCall(MatSetType (S2, MATSBAIJ));
-  PetscCall(MatMPIBAIJSetPreallocation(S2,1,12 + num_vertices,NULL,12 + num_vertices,NULL));
+  /*
+   * Matrix for the S2 operator
+    */
+  if(DoS2){
+    PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
+    PetscCall(MatCreateSBAIJ(PETSC_COMM_WORLD,1,PETSC_DECIDE,PETSC_DECIDE,n,n,12 + num_vertices,NULL,12 + num_vertices,NULL,&S2));
+    PetscCall(MatSetType (S2, MATSBAIJ));
+    PetscCall(MatMPIBAIJSetPreallocation(S2,1,12 + num_vertices,NULL,12 + num_vertices,NULL));
+  }
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of configurations alpha = %ld, beta = %ld\n",sizeAlpha,sizeBeta));
+  //PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
+  //PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of configurations alpha = %ld, beta = %ld\n",sizeAlpha,sizeBeta));
   PetscCall(PetscTime(&tt1));
 
   /*
@@ -170,39 +214,41 @@ int main(int argc,char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to assemble the matrix: %f\n",tt2-tt1));
   //PetscCall(MatView(A, viewer));
 
-  /*
-   * Initialize S2 operator
-    */
-  PetscCall(MatGetOwnershipRange(S2,&Istart,&Iend));
-  for (i=Istart;i<Iend;i++) {
+  if(DoS2) {
+    /*
+     * Initialize S2 operator
+      */
+    PetscCall(MatGetOwnershipRange(S2,&Istart,&Iend));
+    for (i=Istart;i<Iend;i++) {
 
-    igraph_vector_t MElist;
-    igraph_vector_init(&MElist, 0);
-    igraph_vector_t Jdetlist;
-    igraph_vector_init(&Jdetlist, 0);
+      igraph_vector_t MElist;
+      igraph_vector_init(&MElist, 0);
+      igraph_vector_t Jdetlist;
+      igraph_vector_init(&Jdetlist, 0);
 
-    getS2Operator(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph, num_vertices, natomax);
-    for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
-      PetscInt Jid = VECTOR(Jdetlist)[j];
-      //matrix[i][Jid] = VECTOR(MElist)[j];
-      //printf(" %d %10.5f \n",Jid, VECTOR(MElist)[j]);
-      if( i > Jid) PetscCall(MatSetValue(S2,Jid,i,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
-      else         PetscCall(MatSetValue(S2,i,Jid,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
-      //PetscCall(MatSetValue(S2,Jid,i,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
+      getS2Operator(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph, num_vertices, natomax);
+      for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
+        PetscInt Jid = VECTOR(Jdetlist)[j];
+        //matrix[i][Jid] = VECTOR(MElist)[j];
+        //printf(" %d %10.5f \n",Jid, VECTOR(MElist)[j]);
+        if( i > Jid) PetscCall(MatSetValue(S2,Jid,i,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
+        else         PetscCall(MatSetValue(S2,i,Jid,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
+        //PetscCall(MatSetValue(S2,Jid,i,t*(PetscReal)VECTOR(MElist)[j],INSERT_VALUES));
+      }
+
+      igraph_vector_destroy(&MElist);
+      igraph_vector_destroy(&Jdetlist);
     }
+    PetscCall(PetscTime(&tt2));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to build the S2 operator: %f\n",tt2-tt1));
 
-    igraph_vector_destroy(&MElist);
-    igraph_vector_destroy(&Jdetlist);
+
+    PetscCall(PetscTime(&tt1));
+    PetscCall(MatAssemblyBegin(S2,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(S2,MAT_FINAL_ASSEMBLY));
+    PetscCall(PetscTime(&tt2));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to assemble the matrix: %f\n",tt2-tt1));
   }
-  PetscCall(PetscTime(&tt2));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to build the S2 operator: %f\n",tt2-tt1));
-
-
-  PetscCall(PetscTime(&tt1));
-  PetscCall(MatAssemblyBegin(S2,MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(S2,MAT_FINAL_ASSEMBLY));
-  PetscCall(PetscTime(&tt2));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to assemble the matrix: %f\n",tt2-tt1));
 
   PetscCall(MatCreateVecs(A,NULL,&xr));
   PetscCall(MatCreateVecs(A,NULL,&xi));
@@ -299,8 +345,17 @@ int main(int argc,char **argv)
       /*
        * Get Spin S2 value
        */
-      PetscCall(MatMult(S2, xr, vs2));
-      PetscCall(VecDot(xr, vs2, &dot));
+      if(DoS2) {
+        /*
+         * Get Spin S2 value
+         */
+        PetscCall(MatMult(S2, xr, vs2));
+        PetscCall(VecDot(xr, vs2, &dot));
+
+        spin = solveQuad(1.0, 1.0, -1.0*dot);
+      }
+      else spin = 100;
+
 
       if (im!=0.0) PetscCall(PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error));
       else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g       %12f\n",(double)re,(double)error,(double)fabs(dot)));

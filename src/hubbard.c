@@ -2,6 +2,11 @@
 #include "readgraphmllib.h"
 #include "get_s2.h"
 
+double solveQuad(double a, double b, double c) {
+  double root1 = (-b + sqrt(b*b-4.*a*c) ) / (2.*a);
+  return(root1);
+}
+
 size_t get_matelem(size_t deti, size_t detj) {
   exc_number_t exij;
   determinant_t d1[1];
@@ -309,6 +314,16 @@ int getHubbardDiag(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *c
     size_t betadet  = configBeta[betaID];
     size_t doublyOcc = popcnt(alphadet & betadet);
     return doublyOcc;
+}
+
+// Get maximum neighbors
+int getMaxNeighbors(const igraph_t* graph, size_t nsites) {
+    int max_nbrs = 0;
+    for(int i=0; i<nsites; ++i) {
+        int nbrs = getNumberOfConnectedVertices(graph, (igraph_integer_t)i);
+        if(nbrs > max_nbrs) max_nbrs = nbrs;
+    }
+    return(max_nbrs);
 }
 
 // A function to declare a matrix of given size and initialize it to 0
