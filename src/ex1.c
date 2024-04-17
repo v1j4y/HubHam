@@ -166,6 +166,7 @@ int main(int argc,char **argv)
    * Matrix for the S2 operator
     */
   if(DoS2){
+    // Symmetric Matrix
     PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
     PetscCall(MatCreateSBAIJ(PETSC_COMM_WORLD,1,PETSC_DECIDE,PETSC_DECIDE,n,n,12 + num_vertices,NULL,12 + num_vertices,NULL,&S2));
     PetscCall(MatSetType (S2, MATSBAIJ));
@@ -323,7 +324,7 @@ int main(int argc,char **argv)
          "           k          ||Ax-kx||/||kx||         S2    \n"
          "   ----------------- ---------------------------------\n"));
 
-    for (i=0;i<nconv;i++) {
+    for (i=0;i<nev;i++) {
       /*
         Get converged eigenpairs: i-th eigenvalue is stored in kr (real part) and
         ki (imaginary part)
@@ -352,13 +353,14 @@ int main(int argc,char **argv)
         PetscCall(MatMult(S2, xr, vs2));
         PetscCall(VecDot(xr, vs2, &dot));
 
-        spin = solveQuad(1.0, 1.0, -1.0*dot);
+        spin = solveQuad(1.0, 1.0, -1.0*fabs(dot));
       }
       else spin = 100;
 
 
       if (im!=0.0) PetscCall(PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error));
-      else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g       %12f\n",(double)re,(double)error,(double)fabs(dot)));
+      else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g       %12f",(double)re,(double)error,(double)fabs(spin)));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
     }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
   }
