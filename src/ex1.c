@@ -15,7 +15,7 @@ static char help[] = "Standard Hubbard eigenproblem corresponding to the topolog
 
 #include "hubbard.h"
 #include "readgraphmllib.h"
-#include "get_s2.h"
+#include "utils.h"
 
 int main(int argc,char **argv)
 {
@@ -35,6 +35,7 @@ int main(int argc,char **argv)
 
   //const char* graphmlFileName = "/home/chilkuri/Documents/codes/c_codes/hubbard_slepc/data/graphm3.graphml";
   char        graphmlFileName[PETSC_MAX_PATH_LEN]; /* input file name */
+  char        szblk[PETSC_MAX_PATH_LEN]; /* input file name */
   PetscBool       flg;
   PetscCall(PetscOptionsGetString(NULL, NULL, "-f", graphmlFileName, sizeof(graphmlFileName), &flg));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate graphml file with the -f option");
@@ -52,7 +53,7 @@ int main(int argc,char **argv)
   PetscInt  nelec;
   PetscInt  nalpha;
   PetscInt  DoS2 = 0;
-  PetscInt  DoTPS = 0;
+  PetscInt  DoSz = 0;
   PetscInt  DBGPrinting = 0;
   PetscReal t_inp = -1.0;
   PetscReal Ut_inp = 10.0;
@@ -68,6 +69,19 @@ int main(int argc,char **argv)
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate the total number of e- with the -ne option");
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-na",&nalpha,&flg));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate the number of alpha e- with the -na option");
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-hsz",&DoSz,NULL));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate whether or not to Sz with the -hSz option (1=true, 0=false)");
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-hSzblk", szblk, sizeof(szblk), NULL));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Indicate sz blocks with -hSzblk option which inputs pairs of numbers separated by , (e.g. 1,2,3,4)");
+
+  /* 
+   * Read the Sz Blocks into an array
+   *
+   */
+  size_t* SzBlock = malloc(MAX_Sz_BLOCKS * sizeof(size_t));
+  char *p = szblk;
+  int nblk = 0;
+  setSzBlockList(p, &nblk, SzBlock) ;
 
   igraph_t graph;
   igraph_empty(&graph, 0, IGRAPH_DIRECTED);

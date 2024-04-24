@@ -8,6 +8,8 @@
 
 #include "slater_condon.h"
 
+#define MAX_Sz_BLOCKS 100
+
 // Function to find a global ID in the hash table given an alpha and beta ID
 size_t findGlobalID(size_t alphaID, size_t betaID, size_t nalpha) ;
 
@@ -35,6 +37,11 @@ long long binomialCoeff(size_t n, size_t k) ;
 void printPositions(size_t* positions, size_t size) ;
 
 int getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) ;
+
+int getExecDegree(size_t detI, size_t detJ) ;
+
+int getHoles_1ex(size_t detI, size_t detJ, size_t *holesOut) ;
+int getPart_1ex(size_t detI, size_t detJ, size_t *particlesOut) ;
 
 // Function to generate all possible alpha determinants
 void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, size_t betaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs, int alphaBeta) ;
@@ -64,3 +71,6 @@ void save_matrix(double** matrix, int rows, int cols, char* filename) ;
 
 // A function to find the number of permutations and the phase for a given pair of bit strings
 int calculate (int a, int b) ;
+
+// Function to get the Sz  operator
+void getSzOperator(size_t detI, double *tpsval, double *xdi, size_t* cfgList, size_t sizeCFG, int nblk, size_t* SzBlock, const igraph_t* graph, size_t nsites, size_t nholes, int *isDiag) ;

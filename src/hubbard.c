@@ -99,6 +99,59 @@ int getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) {
     return nperm;
 }
 
+int getExecDegree(size_t detI, size_t detJ) {
+    // Result
+    size_t result;
+    determinant_t d1[1];
+    determinant_t d2[1];
+    d1[0] = detI;
+    d2[0] = detJ;
+    result = exc_degree((size_t) 1, d1, d2);
+    return result;
+}
+
+int getHoles_1ex(size_t detI, size_t detJ, size_t *holesOut) {
+    // Result
+    size_t nholes;
+
+    determinant_t d1[1];
+    determinant_t d2[1];
+    d1[0] = detI;
+    d2[0] = detJ;
+    orbital_t holes[2];
+    nholes = get_holes((size_t) 1, d1, d2, holes);
+    holesOut[0] = holes[0];
+    return nholes;
+}
+
+int getPart_1ex(size_t detI, size_t detJ, size_t *particlesOut) {
+    // Result
+    size_t nparticles;
+
+    determinant_t d1[1];
+    determinant_t d2[1];
+    d1[0] = detI;
+    d2[0] = detJ;
+    orbital_t particles[2];
+    nparticles = get_particles((size_t) 1, d1, d2, particles);
+    particlesOut[0] = particles[0];
+    return nparticles;
+}
+
+void getElecList(size_t detI, size_t *holesOut, size_t nelec) {
+    
+    // Initialize determinant
+    determinant_t d1[1];
+    d1[0] = detI;
+    orbital_t particles[nelec];
+    orbital_t res;
+    // Get the orbital (or holes) list
+    res = to_orbital_list((size_t) 1, d1, particles);
+    for( size_t i=0;i<nelec; ++i ) {
+      holesOut[i] = particles[i];
+    }
+}
+
 // Function to generate all possible alpha determinants
 void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, size_t betaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs, int alphaBeta) {
     // Get the number of orbitals
@@ -241,7 +294,6 @@ void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jde
     igraph_vector_destroy(&betaDeterminants);
     igraph_vector_destroy(&betaMEs);
 }
-
 
 // Main function that generates S2 operator
 void getS2Operator(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph, int natom, int natomax) {
@@ -436,3 +488,36 @@ int calculate (int a, int b) {
     // Return the result array
     return phase;
 }
+
+// Function to get the Sz  operator
+void getSzOperator(size_t detI, double *tpsval, double *xdi, size_t* cfgList, size_t sizeCFG, int nblk, size_t* SzBlock, const igraph_t* graph, size_t nsites, size_t nholes, int *isDiag) {
+
+    size_t maskI = (((size_t)1 << (nsites))-1);
+    size_t detIh = detI ^ maskI;
+    // Get the number of holes
+    size_t holesOut[nholes];
+    size_t holesPerBlk[nholes];
+    getElecList(detIh, holesOut, nholes);
+    // Loop over the hole positions
+    for(int k=0; k < nblk; ++k) holesPerBlk[k] = 0;
+    for(int k=0; k < nblk; ++k) {
+      tpsval[k] = 0.0;
+      size_t blki = SzBlock[k];
+      for (size_t i = 0; i < nholes; ++i) {
+        if( (holesOut[i] >= blki)) {
+          holesPerBlk[k] += 1;
+          for (size_t j = 0; j < nholes; ++j) {
+            if( (holesOut[j] >= blki)) {
+              tpsval[k] += xdi[holesOut[i]-1]*xdi[holesOut[j]-1];
+            }
+          }
+        }
+      }
+    }
+    for(int k=0; k < nblk; ++k) {
+      if(holesPerBlk[k] > 1) *isDiag = 1;
+      //printf(" %ld ",holesPerBlk[k]);
+    }
+    //printf("%d\n",*isDiag);
+}
+
