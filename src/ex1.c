@@ -84,6 +84,7 @@ int main(int argc,char **argv)
   setSzBlockList(p, &nblk, SzBlock) ;
 
   igraph_t graph;
+  igraph_set_attribute_table(&igraph_cattribute_table);
   igraph_empty(&graph, 0, IGRAPH_DIRECTED);
   igraph_integer_t num_vertices;
 
@@ -91,6 +92,29 @@ int main(int argc,char **argv)
     // Successfully read the graph, now you can work with 'graph'.
     num_vertices = igraph_vcount(&graph);
   }
+  igraph_strvector_t weights;
+  igraph_strvector_init(&weights, 0);
+
+  // Get the edge attribute "weight"
+  igraph_cattribute_EASV(&graph, "EdgeWeight", igraph_ess_all(IGRAPH_EDGEORDER_ID), &weights);
+
+  // Print all the edge weights
+  int wrows = num_vertices;
+  int wcols = wrows;
+  double** wmatrix = declare_matrix(wrows, wcols);
+  for (int i = 0; i < igraph_strvector_size(&weights); i++) {
+      //printf("Edge %d weight: %s\n", i, VECTOR(weights)[i]);
+      igraph_integer_t from;
+      igraph_integer_t to;
+      igraph_edge(&graph, (igraph_integer_t)i, &from, &to);
+      //printf("Edge %d (%d -> %d) weight: %d\n", i, from, to, atoi(VECTOR(weights)[i]));
+      wmatrix[from][to] = atof(VECTOR(weights)[i]);
+      wmatrix[to][from] = atof(VECTOR(weights)[i]);
+  }
+  //print_matrix_d(wmatrix, wrows, wcols);
+
+  // Free the memory
+  igraph_strvector_destroy(&weights);
 
   // Assume configAlpha and configBeta are sorted lists of all possible alpha and beta configurations
   size_t norb = num_vertices;
@@ -205,7 +229,7 @@ int main(int argc,char **argv)
     int diag = getHubbardDiag(i, configAlpha, sizeAlpha, configBeta, sizeBeta);
     PetscCall(MatSetValue(A,i,i,(PetscReal)diag*U,INSERT_VALUES));
     //matrix[i][i] = (PetscReal)diag*U;
-    getAllHubbardMEs(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph);
+    getAllHubbardMEs(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph, wmatrix);
     for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
       PetscInt Jid = VECTOR(Jdetlist)[j];
       //matrix[i][Jid] = t*(PetscReal)VECTOR(MElist)[j];

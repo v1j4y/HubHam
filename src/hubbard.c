@@ -153,10 +153,11 @@ void getElecList(size_t detI, size_t *holesOut, size_t nelec) {
 }
 
 // Function to generate all possible alpha determinants
-void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, size_t betaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs, int alphaBeta) {
+void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, size_t betaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs, int alphaBeta, double** wmat) {
     // Get the number of orbitals
     size_t norb = igraph_vcount(graph);
     int phase = 1;
+    double MEt = 0.0;
 
     // Loop over each orbital
     for (size_t i = 0; i < norb; ++i) {
@@ -170,6 +171,8 @@ void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t*
             // Loop over each connected vertex
             for (size_t j = 0; j < igraph_vector_int_size(&orbital_id_allowed); ++j) {
                 size_t orbital_id = VECTOR(orbital_id_allowed)[j];
+                //printf("weight = %f \n",wmat[i][orbital_id]);
+                MEt = wmat[i][orbital_id];
 
                 // Check if the connected vertex is unoccupied
                 if (!((alphaConfig >> orbital_id) & 1)) {
@@ -208,7 +211,7 @@ void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t*
                     igraph_vector_push_back(alphaDeterminants, pos);
 
                     // Add the position of the new alpha determinant to the list
-                    igraph_vector_push_back(alphaMEs, phase);
+                    igraph_vector_push_back(alphaMEs, phase*MEt);
                 }
             }
 
@@ -233,14 +236,14 @@ size_t* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) {
 }
 
 // Function to generate all possible alpha determinants for a list of given alpha configurations
-void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, size_t numConfigs, igraph_vector_t* allAlphaDeterminants) {
+void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, size_t numConfigs, igraph_vector_t* allAlphaDeterminants, double** wmat) {
     for (size_t i = 0; i < numConfigs; ++i) {
         igraph_vector_t alphaDeterminants;
         igraph_vector_init(&alphaDeterminants, 0);
         igraph_vector_t alphaMEs;
         igraph_vector_init(&alphaMEs, 0);
 
-        generateDeterminants(configAlpha, sizeAlpha, graph, alphaConfigs[i], 0, &alphaDeterminants, &alphaMEs, 1);
+        generateDeterminants(configAlpha, sizeAlpha, graph, alphaConfigs[i], 0, &alphaDeterminants, &alphaMEs, 1, wmat);
 
         for (size_t j = 0; j < igraph_vector_size(&alphaDeterminants); ++j) {
             igraph_vector_push_back(allAlphaDeterminants, VECTOR(alphaDeterminants)[j]);
@@ -251,7 +254,7 @@ void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph
 }
 
 // Main function that calculates MEs
-void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph) {
+void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph, double** wmat) {
     int phaseAlpha;
     int phaseBeta;
     //Find alpha and beta ids
@@ -263,12 +266,12 @@ void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jde
     igraph_vector_init(&alphaDeterminants, 0);
     igraph_vector_t alphaMEs;
     igraph_vector_init(&alphaMEs, 0);
-    generateDeterminants(configAlpha, sizeAlpha, graph, configAlpha[alphaID], configBeta[betaID], &alphaDeterminants, &alphaMEs, 1);
+    generateDeterminants(configAlpha, sizeAlpha, graph, configAlpha[alphaID], configBeta[betaID], &alphaDeterminants, &alphaMEs, 1, wmat);
     igraph_vector_t betaDeterminants;
     igraph_vector_init(&betaDeterminants, 0);
     igraph_vector_t betaMEs;
     igraph_vector_init(&betaMEs, 0);
-    generateDeterminants(configBeta, sizeBeta, graph, configBeta[betaID], configAlpha[alphaID], &betaDeterminants, &betaMEs, 0);
+    generateDeterminants(configBeta, sizeBeta, graph, configBeta[betaID], configAlpha[alphaID], &betaDeterminants, &betaMEs, 0, wmat);
 
     for (size_t j = 0; j < igraph_vector_size(&alphaDeterminants); ++j) {
         size_t alphaJ = VECTOR(alphaDeterminants)[j];
@@ -417,6 +420,19 @@ void print_matrix(int** matrix, int rows, int cols) {
         for (int j = 0; j < cols; j++) {
             // Print the element with a space
             printf("%d ", matrix[i][j]);
+        }
+        // Print a new line
+        printf("\n");
+    }
+}
+
+// A function to print a matrix
+void print_matrix_d(double** matrix, int rows, int cols) {
+    // Loop through the matrix
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            // Print the element with a space
+            printf("%5f ", matrix[i][j]);
         }
         // Print a new line
         printf("\n");

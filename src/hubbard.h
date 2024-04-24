@@ -34,6 +34,9 @@ int compare(const void* a, const void* b) ;
 // Function to calculate binomial coefficient using lgamma function
 long long binomialCoeff(size_t n, size_t k) ;
 
+// A function to print a matrix
+void print_matrix_d(double** matrix, int rows, int cols) ;
+
 void printPositions(size_t* positions, size_t size) ;
 
 int getPhase(size_t alphaConfig, size_t newAlphaConfig, size_t h, size_t p) ;
@@ -44,15 +47,15 @@ int getHoles_1ex(size_t detI, size_t detJ, size_t *holesOut) ;
 int getPart_1ex(size_t detI, size_t detJ, size_t *particlesOut) ;
 
 // Function to generate all possible alpha determinants
-void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, size_t betaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs, int alphaBeta) ;
+void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, size_t betaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs, int alphaBeta, double** wmat) ;
 
 // Function to generate all possible alpha determinants given a list of alpha determinants
-void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, size_t numConfigs, igraph_vector_t* allAlphaDeterminants) ;
+void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, size_t numConfigs, igraph_vector_t* allAlphaDeterminants, double** wmat) ;
 
 size_t* igraphVectorToIntArray(const igraph_vector_t* igraph_vector) ;
 
 // Main function that calculates MEs
-void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph) ;
+void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph, double** wmat) ;
 
 // Get the diagonal part of the hubbard Hamiltonian
 int getHubbardDiag(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta) ;
