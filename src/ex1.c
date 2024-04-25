@@ -101,45 +101,7 @@ int main(int argc,char **argv)
   int wcols = wrows;
   double** wmatrix = declare_matrix(wrows, wcols);
 
-  // Get the edge attribute "weight"
-  if(hasW) {
-    igraph_strvector_t weights;
-    igraph_strvector_init(&weights, 0);
-
-    igraph_cattribute_EASV(&graph, "EdgeWeight", igraph_ess_all(IGRAPH_EDGEORDER_ID), &weights);
-
-    for (int i = 0; i < igraph_strvector_size(&weights); i++) {
-        //printf("Edge %d weight: %s\n", i, VECTOR(weights)[i]);
-        igraph_integer_t from;
-        igraph_integer_t to;
-        igraph_edge(&graph, (igraph_integer_t)i, &from, &to);
-        //printf("Edge %d (%d -> %d) weight: %d\n", i, from, to, atoi(VECTOR(weights)[i]));
-        wmatrix[from][to] = atof(VECTOR(weights)[i]);
-        wmatrix[to][from] = atof(VECTOR(weights)[i]);
-    }
-    //print_matrix_d(wmatrix, wrows, wcols);
-
-    // Free the memory
-    igraph_strvector_destroy(&weights);
-  }
-  else {
-    for (int i = 0; i < num_vertices; i++) {
-      //printf("Edge %d weight: %s\n", i, VECTOR(weights)[i]);
-      igraph_vector_int_t orbital_id_allowed;
-      igraph_vector_int_init(&orbital_id_allowed, 0);
-      getConnectedVertices(&graph, (igraph_integer_t)i, &orbital_id_allowed);
-      for (size_t j = 0; j < igraph_vector_int_size(&orbital_id_allowed); ++j) {
-        size_t orbital_id = VECTOR(orbital_id_allowed)[j];
-        igraph_integer_t from;
-        igraph_integer_t to;
-        from = i;
-        to = orbital_id;
-        wmatrix[from][to] = 1.0;
-        wmatrix[to][from] = 1.0;
-      }
-    }
-    //print_matrix_d(wmatrix, wrows, wcols);
-  }
+  getWeightMatrix(&graph, wmatrix, (size_t)hasW);
 
   // Assume configAlpha and configBeta are sorted lists of all possible alpha and beta configurations
   size_t norb = num_vertices;
