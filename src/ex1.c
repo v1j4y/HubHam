@@ -53,6 +53,7 @@ int main(int argc,char **argv)
   PetscInt  nelec;
   PetscInt  nalpha;
   PetscInt  DoS2 = 0;
+  PetscInt  hasW = 0;
   PetscInt  DoSz = 0;
   PetscInt  DBGPrinting = 0;
   PetscReal t_inp = -1.0;
@@ -73,6 +74,8 @@ int main(int argc,char **argv)
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate whether or not to Sz with the -hSz option (1=true, 0=false)");
   PetscCall(PetscOptionsGetString(NULL, NULL, "-hSzblk", szblk, sizeof(szblk), NULL));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Indicate sz blocks with -hSzblk option which inputs pairs of numbers separated by , (e.g. 1,2,3,4)");
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-hhasW",&hasW,NULL));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Indicate whether or not the graph has weight -hhasW option (1=true, 0=false)");
 
   /* 
    * Read the Sz Blocks into an array
@@ -92,29 +95,51 @@ int main(int argc,char **argv)
     // Successfully read the graph, now you can work with 'graph'.
     num_vertices = igraph_vcount(&graph);
   }
-  igraph_strvector_t weights;
-  igraph_strvector_init(&weights, 0);
-
-  // Get the edge attribute "weight"
-  igraph_cattribute_EASV(&graph, "EdgeWeight", igraph_ess_all(IGRAPH_EDGEORDER_ID), &weights);
 
   // Print all the edge weights
   int wrows = num_vertices;
   int wcols = wrows;
   double** wmatrix = declare_matrix(wrows, wcols);
-  for (int i = 0; i < igraph_strvector_size(&weights); i++) {
-      //printf("Edge %d weight: %s\n", i, VECTOR(weights)[i]);
-      igraph_integer_t from;
-      igraph_integer_t to;
-      igraph_edge(&graph, (igraph_integer_t)i, &from, &to);
-      //printf("Edge %d (%d -> %d) weight: %d\n", i, from, to, atoi(VECTOR(weights)[i]));
-      wmatrix[from][to] = atof(VECTOR(weights)[i]);
-      wmatrix[to][from] = atof(VECTOR(weights)[i]);
-  }
-  //print_matrix_d(wmatrix, wrows, wcols);
 
-  // Free the memory
-  igraph_strvector_destroy(&weights);
+  // Get the edge attribute "weight"
+  if(hasW) {
+    igraph_strvector_t weights;
+    igraph_strvector_init(&weights, 0);
+
+    igraph_cattribute_EASV(&graph, "EdgeWeight", igraph_ess_all(IGRAPH_EDGEORDER_ID), &weights);
+
+    for (int i = 0; i < igraph_strvector_size(&weights); i++) {
+        //printf("Edge %d weight: %s\n", i, VECTOR(weights)[i]);
+        igraph_integer_t from;
+        igraph_integer_t to;
+        igraph_edge(&graph, (igraph_integer_t)i, &from, &to);
+        //printf("Edge %d (%d -> %d) weight: %d\n", i, from, to, atoi(VECTOR(weights)[i]));
+        wmatrix[from][to] = atof(VECTOR(weights)[i]);
+        wmatrix[to][from] = atof(VECTOR(weights)[i]);
+    }
+    //print_matrix_d(wmatrix, wrows, wcols);
+
+    // Free the memory
+    igraph_strvector_destroy(&weights);
+  }
+  else {
+    for (int i = 0; i < num_vertices; i++) {
+      //printf("Edge %d weight: %s\n", i, VECTOR(weights)[i]);
+      igraph_vector_int_t orbital_id_allowed;
+      igraph_vector_int_init(&orbital_id_allowed, 0);
+      getConnectedVertices(&graph, (igraph_integer_t)i, &orbital_id_allowed);
+      for (size_t j = 0; j < igraph_vector_int_size(&orbital_id_allowed); ++j) {
+        size_t orbital_id = VECTOR(orbital_id_allowed)[j];
+        igraph_integer_t from;
+        igraph_integer_t to;
+        from = i;
+        to = orbital_id;
+        wmatrix[from][to] = 1.0;
+        wmatrix[to][from] = 1.0;
+      }
+    }
+    //print_matrix_d(wmatrix, wrows, wcols);
+  }
 
   // Assume configAlpha and configBeta are sorted lists of all possible alpha and beta configurations
   size_t norb = num_vertices;
