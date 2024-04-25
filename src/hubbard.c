@@ -255,8 +255,8 @@ void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph
 
 // Main function that calculates MEs
 void getAllHubbardMEs(size_t Idet, igraph_vector_t* MElist, igraph_vector_t* Jdetlist, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph, double** wmat) {
-    int phaseAlpha;
-    int phaseBeta;
+    double phaseAlpha;
+    double phaseBeta;
     //Find alpha and beta ids
     size_t alphaID = findAlphaID(Idet, sizeAlpha, sizeBeta);
     size_t betaID  = findBetaID(Idet, sizeAlpha, sizeBeta);
