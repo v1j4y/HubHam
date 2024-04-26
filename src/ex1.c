@@ -55,6 +55,7 @@ int main(int argc,char **argv)
   PetscInt  DoS2 = 0;
   PetscInt  hasW = 0;
   PetscInt  DoSz = 0;
+  PetscInt  DoNum = 0;
   PetscInt  DBGPrinting = 0;
   PetscReal t_inp = -1.0;
   PetscReal Ut_inp = 10.0;
@@ -72,6 +73,8 @@ int main(int argc,char **argv)
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate the number of alpha e- with the -na option");
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-hsz",&DoSz,NULL));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate whether or not to Sz with the -hSz option (1=true, 0=false)");
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-hnum",&DoNum,NULL));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate whether or not to <n> with the -hSz option (1=true, 0=false)");
   PetscCall(PetscOptionsGetString(NULL, NULL, "-hSzblk", szblk, sizeof(szblk), NULL));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Indicate sz blocks with -hSzblk option which inputs pairs of numbers separated by , (e.g. 1,2,3,4)");
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-hhasW",&hasW,NULL));
@@ -82,9 +85,12 @@ int main(int argc,char **argv)
    *
    */
   size_t* SzBlock = malloc(MAX_Sz_BLOCKS * sizeof(size_t));
+  size_t* NumBlock = malloc(MAX_Sz_BLOCKS * sizeof(size_t));
   char *p = szblk;
   int nblk = 0;
   setSzBlockList(p, &nblk, SzBlock) ;
+  for(size_t k=0;k<nblk;++k) NumBlock[k] = SzBlock[k];
+  //printf(" doSz = %d nblk=%d\n",DoSz, nblk);
 
   igraph_t graph;
   igraph_set_attribute_table(&igraph_cattribute_table);
@@ -346,8 +352,8 @@ int main(int argc,char **argv)
        Display eigenvalues and relative errors
     */
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,
-         "           k          ||Ax-kx||/||kx||         S2    \n"
-         "   ----------------- ---------------------------------\n"));
+         "           k          ||Ax-kx||/||kx||         S2                 Sz   \n"
+         "   ----------------- -----------------------------------------------------\n"));
 
     for (i=0;i<nev;i++) {
       /*
@@ -382,10 +388,128 @@ int main(int argc,char **argv)
       }
       else spin = 100;
 
+      double** szvalAll = declare_matrix(num_vertices, num_vertices);
+      if(DoSz) {
+        /*
+         * Get Sz values
+         */
+        double** szvalpsi = declare_matrix(num_vertices, num_vertices);
+        double szval[2]; 
+        for(size_t i1=0;i1<num_vertices;++i1) {
+        for(size_t i2=0;i2<num_vertices;++i2) {
+          szvalpsi[i1][i2] = 0.0;
+          szvalAll[i1][i2] = 0.0;
+        }
+        }
+        for(size_t k=0;k<2;++k) {
+          szval[k] = 0.0; 
+        }
+        PetscCall(VecGetOwnershipRange(xr,&Istart,&Iend));
+        for (size_t j=Istart;j<Iend;j++) {
+          PetscInt ix[1];
+          PetscScalar y[1];
+          ix[0] = (size_t)j;
+          PetscCall(VecGetValues(xr, 1, ix, y));
+          size_t posi = j;
+          size_t alphaID = findAlphaID(posi, sizeAlpha, sizeBeta);
+          size_t betaID  = findBetaID(posi, sizeAlpha, sizeBeta);
+          size_t detIa[1];
+          size_t detIb[1];
+          detIa[0] = configAlpha[alphaID];
+          detIb[0] = configBeta[betaID];
+          for(size_t i1=0;i1<num_vertices;++i1) {
+            for(size_t i2=0;i2<num_vertices;++i2) {
+              SzBlock[0] = i1;
+              SzBlock[1] = i2;
+              getSzOperator(detIa[0], detIb[0], szval, configAlpha, sizeAlpha, configBeta, sizeBeta, 2, SzBlock) ;
+              double szprodpsi=1.0;
+              for(size_t k=0;k<2;++k) {
+                 szprodpsi *= szval[k]*y[0]*y[0];
+              }
+              szvalpsi[i1][i2] += szprodpsi;
+            }
+          }
+
+          //printf(" --> %d \n",isDiag);
+          if(DBGPrinting) {
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%12f \t",y[0]));
+            printf("\t alpha: ");
+						for(size_t l=0; l < nalpha; ++l) {
+              printf(" %d ",(1<<(l)) & detIa[0]? 1 : 0);
+            }
+            printf("\t CSF: ");
+						for(size_t l=0; l < nbeta; ++l) {
+              printf(" %d ",(1<<(l)) & detIb[0]? 1 : 0);
+            }
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+          }
+        }
+        MPI_Reduce(&szvalpsi, &szvalAll, nblk, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
+      }
+
+      double numvalAll[nblk]; 
+      if(DoNum) {
+        /*
+         * Get electron Number values
+         */
+        double numvalpsi[nblk]; 
+        double numval[nblk]; 
+        for(size_t k=0;k<nblk;++k) {
+          numvalAll[k] = 0.0;
+          numvalpsi[k] = 0.0; 
+          numval[k] = 0.0; 
+        }
+        PetscCall(VecGetOwnershipRange(xr,&Istart,&Iend));
+        for (size_t j=Istart;j<Iend;j++) {
+          PetscInt ix[1];
+          PetscScalar y[1];
+          ix[0] = (size_t)j;
+          PetscCall(VecGetValues(xr, 1, ix, y));
+          size_t posi = j;
+          size_t alphaID = findAlphaID(posi, sizeAlpha, sizeBeta);
+          size_t betaID  = findBetaID(posi, sizeAlpha, sizeBeta);
+          size_t detIa[1];
+          size_t detIb[1];
+          detIa[0] = configAlpha[alphaID];
+          detIb[0] = configBeta[betaID];
+
+          getNumOperator(detIa[0], detIb[0], numval, configAlpha, sizeAlpha, configBeta, sizeBeta, nblk, NumBlock) ;
+          for(size_t k=0;k<nblk;++k) {
+             numvalpsi[k] += numval[k]*y[0]*y[0];
+          }
+          //printf(" --> %d \n",isDiag);
+          if(DBGPrinting) {
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%12f \t",y[0]));
+            printf("\t alpha: ");
+						for(size_t l=0; l < nalpha; ++l) {
+              printf(" %d ",(1<<(l)) & detIa[0]? 1 : 0);
+            }
+            printf("\t CSF: ");
+						for(size_t l=0; l < nbeta; ++l) {
+              printf(" %d ",(1<<(l)) & detIb[0]? 1 : 0);
+            }
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+          }
+        }
+        MPI_Reduce(&numvalpsi, &numvalAll, nblk, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
+      }
+
 
       if (im!=0.0) PetscCall(PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error));
       else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g       %12f",(double)re,(double)error,(double)fabs(spin)));
+      //PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+      if(DoSz) {
+        int a=NumBlock[0];
+        int b=NumBlock[1];
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)szvalAll[a][b]));
+      }
+      //if(DoNum) {
+      //  for(size_t k=0;k<nblk;++k) {
+      //    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)numvalAll[0]));
+      //  }
+      //}
       PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+
     }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
   }

@@ -76,4 +76,7 @@ void save_matrix(double** matrix, int rows, int cols, char* filename) ;
 int calculate (int a, int b) ;
 
 // Function to get the Sz  operator
-void getSzOperator(size_t detI, double *tpsval, double *xdi, size_t* cfgList, size_t sizeCFG, int nblk, size_t* SzBlock, const igraph_t* graph, size_t nsites, size_t nholes, int *isDiag) ;
+void getSzOperator(size_t detIa, size_t detIb, double *szval, size_t* configAlpha, size_t sizeAlpha, size_t* configBeta, size_t sizeBeta, int nblk, size_t* SzBlock) ;
+
+// Function to get the num  operator
+void getNumOperator(size_t detIa, size_t detIb, double *numval, size_t* configAlpha, size_t sizeAlpha, size_t* configBeta, size_t sizeBeta, int nblk, size_t* NumBlock) ;

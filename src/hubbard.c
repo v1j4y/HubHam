@@ -505,35 +505,47 @@ int calculate (int a, int b) {
     return phase;
 }
 
-// Function to get the Sz  operator
-void getSzOperator(size_t detI, double *tpsval, double *xdi, size_t* cfgList, size_t sizeCFG, int nblk, size_t* SzBlock, const igraph_t* graph, size_t nsites, size_t nholes, int *isDiag) {
+// Function to get the num  operator
+void getNumOperator(size_t detIa, size_t detIb, double *numval, size_t* configAlpha, size_t sizeAlpha, size_t* configBeta, size_t sizeBeta, int nblk, size_t* NumBlock) {
 
-    size_t maskI = (((size_t)1 << (nsites))-1);
-    size_t detIh = detI ^ maskI;
-    // Get the number of holes
-    size_t holesOut[nholes];
-    size_t holesPerBlk[nholes];
-    getElecList(detIh, holesOut, nholes);
-    // Loop over the hole positions
-    for(int k=0; k < nblk; ++k) holesPerBlk[k] = 0;
-    for(int k=0; k < nblk; ++k) {
-      tpsval[k] = 0.0;
-      size_t blki = SzBlock[k];
-      for (size_t i = 0; i < nholes; ++i) {
-        if( (holesOut[i] >= blki)) {
-          holesPerBlk[k] += 1;
-          for (size_t j = 0; j < nholes; ++j) {
-            if( (holesOut[j] >= blki)) {
-              tpsval[k] += xdi[holesOut[i]-1]*xdi[holesOut[j]-1];
-            }
-          }
-        }
+    double n=0.0;
+    size_t pos;
+    // Loop over positions
+    for(size_t p=0;p<nblk; ++p) {
+      pos = NumBlock[p];
+      // Check if alpha electron
+      if( detIa & (1 << (pos)) ) {
+        n += 1.0;
       }
+      
+      // Check if beta electron
+      if( detIb & (1 << (pos)) ) {
+        n = 1.0;
+      }
+      numval[p] = n;
+      n = 0.0;
     }
-    for(int k=0; k < nblk; ++k) {
-      if(holesPerBlk[k] > 1) *isDiag = 1;
-      //printf(" %ld ",holesPerBlk[k]);
+}
+
+// Function to get the Sz  operator
+void getSzOperator(size_t detIa, size_t detIb, double *szval, size_t* configAlpha, size_t sizeAlpha, size_t* configBeta, size_t sizeBeta, int nblk, size_t* SzBlock) {
+
+    double sz=0.0;
+    size_t pos;
+    // Loop over positions
+    for(size_t p=0;p<nblk; ++p) {
+      pos = SzBlock[p];
+      // Check if alpha electron
+      if( detIa & (1 << (pos)) ) {
+        sz += 0.5;
+      }
+      
+      // Check if beta electron
+      if( detIb & (1 << (pos)) ) {
+        sz -= 0.5;
+      }
+      szval[p] = sz;
+      sz = 0.0;
     }
-    //printf("%d\n",*isDiag);
 }
 
