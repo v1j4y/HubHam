@@ -522,11 +522,11 @@ int main(int argc,char **argv)
           PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)szvalAll[i1*num_vertices + i2]));
         }
       }
-      //if(DoNum) {
-      //  for(size_t k=0;k<nblk;++k) {
-      //    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)numvalAll[0]));
-      //  }
-      //}
+      if(DoNum) {
+        for(size_t k=0;k<nblk;++k) {
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)numvalAll[0]));
+        }
+      }
       PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
 
     }
