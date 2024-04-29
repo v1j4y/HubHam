@@ -108,6 +108,16 @@ int main(int argc,char **argv)
   double** wmatrix = declare_matrix(wrows, wcols);
 
   getWeightMatrix(&graph, wmatrix, (size_t)hasW);
+  //print_matrix_d(wmatrix, wrows, wcols);
+  //for (size_t i = 0; i < num_vertices; ++i) {
+  //  igraph_vector_int_t orbital_id_allowed;
+  //  igraph_vector_int_init(&orbital_id_allowed, 0);
+  //  getConnectedVertices(&graph, (igraph_integer_t)i, &orbital_id_allowed);
+  //  for (size_t j = 0; j < igraph_vector_int_size(&orbital_id_allowed); ++j) {
+  //      size_t orbital_id = VECTOR(orbital_id_allowed)[j];
+  //      printf(" %ld %ld \n",i,orbital_id);
+  //  }
+  //}
 
   // Assume configAlpha and configBeta are sorted lists of all possible alpha and beta configurations
   size_t norb = num_vertices;
@@ -388,17 +398,21 @@ int main(int argc,char **argv)
       }
       else spin = 100;
 
-      double** szvalAll = declare_matrix(num_vertices, num_vertices);
+      //double** szvalAll = declare_matrix(num_vertices, num_vertices);
+      //double* szvalAll = (double *)malloc(num_vertices * num_vertices * sizeof(double));
+      double szvalAll[num_vertices * num_vertices];
       if(DoSz) {
         /*
          * Get Sz values
          */
-        double** szvalpsi = declare_matrix(num_vertices, num_vertices);
+        //double** szvalpsi = declare_matrix(num_vertices, num_vertices);
+        //double* szvalpsi = (double *)malloc(num_vertices * num_vertices * sizeof(double));
+        double szvalpsi[num_vertices * num_vertices];
         double szval[2]; 
         for(size_t i1=0;i1<num_vertices;++i1) {
         for(size_t i2=0;i2<num_vertices;++i2) {
-          szvalpsi[i1][i2] = 0.0;
-          szvalAll[i1][i2] = 0.0;
+          szvalpsi[i1*num_vertices + i2] = 0.0;
+          szvalAll[i1*num_vertices + i2] = 0.0;
         }
         }
         for(size_t k=0;k<2;++k) {
@@ -423,10 +437,8 @@ int main(int argc,char **argv)
               SzBlock[1] = i2;
               getSzOperator(detIa[0], detIb[0], szval, configAlpha, sizeAlpha, configBeta, sizeBeta, 2, SzBlock) ;
               double szprodpsi=1.0;
-              for(size_t k=0;k<2;++k) {
-                 szprodpsi *= szval[k]*y[0]*y[0];
-              }
-              szvalpsi[i1][i2] += szprodpsi;
+              szprodpsi = szval[0]*szval[1];
+              szvalpsi[i1*num_vertices + i2] += szprodpsi*y[0]*y[0];;
             }
           }
 
@@ -444,7 +456,7 @@ int main(int argc,char **argv)
             PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
           }
         }
-        MPI_Reduce(&szvalpsi, &szvalAll, nblk, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
+        MPI_Reduce(&szvalpsi, &szvalAll, num_vertices*num_vertices, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
       }
 
       double numvalAll[nblk]; 
@@ -498,10 +510,17 @@ int main(int argc,char **argv)
       if (im!=0.0) PetscCall(PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error));
       else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g       %12f",(double)re,(double)error,(double)fabs(spin)));
       //PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+      //if(DoSz) {
+      //  int a=NumBlock[0];
+      //  int b=NumBlock[1];
+      //  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)szvalAll[a][b]));
+      //}
       if(DoSz) {
-        int a=NumBlock[0];
-        int b=NumBlock[1];
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)szvalAll[a][b]));
+        for(size_t l=0;l<nblk;l=l+2) {
+          size_t i1 = NumBlock[l];
+          size_t i2 = NumBlock[l+1];
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)szvalAll[i1*num_vertices + i2]));
+        }
       }
       //if(DoNum) {
       //  for(size_t k=0;k<nblk;++k) {
