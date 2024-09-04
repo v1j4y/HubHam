@@ -506,7 +506,7 @@ int calculate (int a, int b) {
 }
 
 // Function to get the num  operator
-void getNumOperator(size_t detIa, size_t detIb, double *numval, size_t* configAlpha, size_t sizeAlpha, size_t* configBeta, size_t sizeBeta, int nblk, size_t* NumBlock) {
+void getNumOperator(size_t detIa, size_t detIb, double *numval, double *numvala, size_t* configAlpha, size_t sizeAlpha, size_t* configBeta, size_t sizeBeta, int nblk, size_t* NumBlock) {
 
     double n=0.0;
     size_t pos;
@@ -517,10 +517,11 @@ void getNumOperator(size_t detIa, size_t detIb, double *numval, size_t* configAl
       if( detIa & (1 << (pos)) ) {
         n += 1.0;
       }
+      numvala[p] = n;
       
       // Check if beta electron
       if( detIb & (1 << (pos)) ) {
-        n = 1.0;
+        n += 1.0;
       }
       numval[p] = n;
       n = 0.0;

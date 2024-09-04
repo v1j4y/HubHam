@@ -74,7 +74,7 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-hsz",&DoSz,NULL));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate whether or not to Sz with the -hSz option (1=true, 0=false)");
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-hnum",&DoNum,NULL));
-  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate whether or not to <n> with the -hSz option (1=true, 0=false)");
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Must indicate whether or not to <n> with the -hnum option (1=true, 0=false)");
   PetscCall(PetscOptionsGetString(NULL, NULL, "-hSzblk", szblk, sizeof(szblk), NULL));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Indicate sz blocks with -hSzblk option which inputs pairs of numbers separated by , (e.g. 1,2,3,4)");
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-hhasW",&hasW,NULL));
@@ -361,9 +361,21 @@ int main(int argc,char **argv)
     /*
        Display eigenvalues and relative errors
     */
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+    if(DoSz){
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,
          "           k          ||Ax-kx||/||kx||         S2                 Sz   \n"
          "   ----------------- -----------------------------------------------------\n"));
+    }
+    else if(DoNum){
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+         "           k          ||Ax-kx||/||kx||         S2                 <N>  \n"
+         "   ----------------- -----------------------------------------------------\n"));
+    }
+    else{
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+         "           k          ||Ax-kx||/||kx||         S2         \n"
+         "   ----------------- -------------------------------------\n"));
+    }
 
     for (i=0;i<nev;i++) {
       /*
@@ -460,17 +472,35 @@ int main(int argc,char **argv)
       }
 
       double numvalAll[nblk]; 
+      double weightNAll;
       if(DoNum) {
         /*
          * Get electron Number values
+         *
+         * The code can be used to calculate the
+         * total weight of the neutral configurations 
+         * or the weight of the <N>==1 on any combination
+         * of sites as follows:
+         *
+         * -> with -hSblk 0,1,2,3,4,5,6,7 we get the total
+         * weight of the neutral determinants.
+         *
+         * -> with -hSblk 0 we get the probability of 
+         *  finding 1 electron on the site labelled 0.
+         *
          */
         double numvalpsi[nblk]; 
+        double weightNpsi;
         double numval[nblk]; 
+        double numvala[nblk]; 
+        int    isN=0;
         for(size_t k=0;k<nblk;++k) {
           numvalAll[k] = 0.0;
           numvalpsi[k] = 0.0; 
           numval[k] = 0.0; 
+          numvala[k] = 0.0; 
         }
+        weightNpsi=0.0;
         PetscCall(VecGetOwnershipRange(xr,&Istart,&Iend));
         for (size_t j=Istart;j<Iend;j++) {
           PetscInt ix[1];
@@ -484,11 +514,14 @@ int main(int argc,char **argv)
           size_t detIb[1];
           detIa[0] = configAlpha[alphaID];
           detIb[0] = configBeta[betaID];
+          isN = 0;
 
-          getNumOperator(detIa[0], detIb[0], numval, configAlpha, sizeAlpha, configBeta, sizeBeta, nblk, NumBlock) ;
+          getNumOperator(detIa[0], detIb[0], numval, numvala, configAlpha, sizeAlpha, configBeta, sizeBeta, nblk, NumBlock) ;
           for(size_t k=0;k<nblk;++k) {
-             numvalpsi[k] += numval[k]*y[0]*y[0];
+             numvalpsi[k] += numvala[k]*y[0]*y[0];
+             if(abs(numval[k] - 1.0) < 10E-12) isN+=1;
           }
+          if(isN==nblk) weightNpsi += y[0]*y[0];
           //printf(" --> %d \n",isDiag);
           if(DBGPrinting) {
             PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%12f \t",y[0]));
@@ -504,6 +537,7 @@ int main(int argc,char **argv)
           }
         }
         MPI_Reduce(&numvalpsi, &numvalAll, nblk, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
+        MPI_Reduce(&weightNpsi, &weightNAll, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD);
       }
 
 
@@ -523,9 +557,10 @@ int main(int argc,char **argv)
         }
       }
       if(DoNum) {
-        for(size_t k=0;k<nblk;++k) {
-          PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)numvalAll[0]));
-        }
+        //for(size_t k=0;k<nblk;++k) {
+        //  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"       %8.5f ",(double)numvalAll[k]));
+        //}
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"     W = %8.5f ",weightNAll));
       }
       PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
 

@@ -79,4 +79,4 @@ int calculate (int a, int b) ;
 void getSzOperator(size_t detIa, size_t detIb, double *szval, size_t* configAlpha, size_t sizeAlpha, size_t* configBeta, size_t sizeBeta, int nblk, size_t* SzBlock) ;
 
 // Function to get the num  operator
-void getNumOperator(size_t detIa, size_t detIb, double *numval, size_t* configAlpha, size_t sizeAlpha, size_t* configBeta, size_t sizeBeta, int nblk, size_t* NumBlock) ;
+void getNumOperator(size_t detIa, size_t detIb, double *numval, double *numvala, size_t* configAlpha, size_t sizeAlpha, size_t* configBeta, size_t sizeBeta, int nblk, size_t* NumBlock) ;
