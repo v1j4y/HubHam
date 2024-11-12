@@ -371,6 +371,58 @@ int getHubbardDiag(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *c
     return doublyOcc;
 }
 
+// Get the diagonal part of the hubbard Hamiltonian
+void getHubbardDiagVij(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph, double* alphaMEs, double** vmat) {
+    // Get the number of orbitals
+    size_t norb = igraph_vcount(graph);
+    //Find alpha and beta ids
+    size_t alphaID = findAlphaID(Idet, sizeAlpha, sizeBeta);
+    size_t betaID  = findBetaID(Idet, sizeAlpha, sizeBeta);
+
+    size_t alphaConfig = configAlpha[alphaID];
+    size_t betaConfig  = configBeta[betaID];
+    size_t alphabeta   = alphaConfig | betaConfig;
+
+    double MEv = 0.0;
+
+    // Loop over each orbital
+    for (size_t i = 0; i < norb; ++i) {
+        // Check if the orbital is occupied
+        if ((alphabeta >> i) & 1) {
+            // Get the connected vertices
+            igraph_vector_int_t orbital_id_allowed;
+            igraph_vector_int_init(&orbital_id_allowed, 0);
+            getConnectedVertices(graph, (igraph_integer_t)i, &orbital_id_allowed);
+
+            // Loop over each connected vertex
+            for (size_t j = 0; j < igraph_vector_int_size(&orbital_id_allowed); ++j) {
+                size_t orbital_id = VECTOR(orbital_id_allowed)[j];
+                //printf("weight = %f \n",wmat[i][orbital_id]);
+                MEv = vmat[i][orbital_id];
+
+                // Check if the connected vertex is unoccupied
+                if ((alphabeta >> orbital_id) & 1) {
+                    // Create a new alpha determinant by moving the electron
+                    size_t ni = (( alphaConfig >> i) & 1) + ((betaConfig >> i) & 1);
+                    size_t nj = (( alphaConfig >> orbital_id) & 1) + ((betaConfig >> orbital_id) & 1);
+
+                    // Find the position of the new alpha determinant in the list and add it to alphaDeterminants
+                    size_t pos = Idet;
+
+                    // Add the position of the new alpha determinant to the list
+                    //igraph_vector_push_back(alphaDeterminants, pos);
+
+                    // Add the position of the new alpha determinant to the list
+                    alphaMEs[0] += MEv * (1.0-ni)*(1.0-nj);
+                    printf(" ME=%10.5f\n",alphaMEs[0]);
+                }
+            }
+
+            igraph_vector_int_destroy(&orbital_id_allowed);
+        }
+    }
+}
+
 // Get maximum neighbors
 int getMaxNeighbors(const igraph_t* graph, size_t nsites) {
     int max_nbrs = 0;

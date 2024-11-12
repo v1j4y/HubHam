@@ -49,6 +49,9 @@ int getPart_1ex(size_t detI, size_t detJ, size_t *particlesOut) ;
 // Function to generate all possible alpha determinants
 void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t alphaConfig, size_t betaConfig, igraph_vector_t* alphaDeterminants, igraph_vector_t* alphaMEs, int alphaBeta, double** wmat) ;
 
+// Get the diagonal part of the hubbard Hamiltonian
+void getHubbardDiagVij(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_t *configBeta, size_t sizeBeta, const igraph_t* graph, double* alphaMEs, double** vmat) ;
+
 // Function to generate all possible alpha determinants given a list of alpha determinants
 void generateAllDeterminants(size_t *configAlpha, size_t sizeAlpha, const igraph_t* graph, size_t* alphaConfigs, size_t numConfigs, igraph_vector_t* allAlphaDeterminants, double** wmat) ;
 

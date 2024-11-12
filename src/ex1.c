@@ -54,6 +54,7 @@ int main(int argc,char **argv)
   PetscInt  nalpha;
   PetscInt  DoS2 = 0;
   PetscInt  hasW = 0;
+  PetscInt  hasV = 0;
   PetscInt  DoSz = 0;
   PetscInt  DoNum = 0;
   PetscInt  DBGPrinting = 0;
@@ -79,6 +80,8 @@ int main(int argc,char **argv)
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Indicate sz blocks with -hSzblk option which inputs pairs of numbers separated by , (e.g. 1,2,3,4)");
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-hhasW",&hasW,NULL));
   PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Indicate whether or not the graph has weight -hhasW option (1=true, 0=false)");
+  PetscCall(PetscOptionsGetInt(NULL,NULL,"-hhasV",&hasV,NULL));
+  PetscCheck(flg, PETSC_COMM_WORLD, PETSC_ERR_USER, "Indicate whether or not the graph has nearest neighbor repulsion -hhasV option (1=true, 0=false)");
 
   /* 
    * Read the Sz Blocks into an array
@@ -90,7 +93,7 @@ int main(int argc,char **argv)
   int nblk = 0;
   setSzBlockList(p, &nblk, SzBlock) ;
   for(size_t k=0;k<nblk;++k) NumBlock[k] = SzBlock[k];
-  //printf(" doSz = %d nblk=%d\n",DoSz, nblk);
+  printf(" doSz = %ld nblk=%d HASV=%ld ---- \n",DoSz, nblk,hasV);
 
   igraph_t graph;
   igraph_set_attribute_table(&igraph_cattribute_table);
@@ -106,9 +109,11 @@ int main(int argc,char **argv)
   int wrows = num_vertices;
   int wcols = wrows;
   double** wmatrix = declare_matrix(wrows, wcols);
+  double** vmatrix = declare_matrix(wrows, wcols);
 
   getWeightMatrix(&graph, wmatrix, (size_t)hasW);
-  //print_matrix_d(wmatrix, wrows, wcols);
+  getRepulsionMatrix(&graph, vmatrix, (size_t)hasV);
+  print_matrix_d(vmatrix, wrows, wcols);
   //for (size_t i = 0; i < num_vertices; ++i) {
   //  igraph_vector_int_t orbital_id_allowed;
   //  igraph_vector_int_init(&orbital_id_allowed, 0);
@@ -209,9 +214,9 @@ int main(int argc,char **argv)
   if(DoS2){
     // Symmetric Matrix
     PetscCall(MatCreate(PETSC_COMM_WORLD,&S2));
-    PetscCall(MatCreateSBAIJ(PETSC_COMM_WORLD,1,PETSC_DECIDE,PETSC_DECIDE,n,n,12 + num_vertices,NULL,12 + num_vertices,NULL,&S2));
+    PetscCall(MatCreateSBAIJ(PETSC_COMM_WORLD,1,PETSC_DECIDE,PETSC_DECIDE,n,n,norb*num_vertices,NULL,norb*num_vertices,NULL,&S2));
     PetscCall(MatSetType (S2, MATSBAIJ));
-    PetscCall(MatMPIBAIJSetPreallocation(S2,1,12 + num_vertices,NULL,12 + num_vertices,NULL));
+    PetscCall(MatMPIBAIJSetPreallocation(S2,1,norb*num_vertices,NULL,norb*num_vertices,NULL));
   }
 
   //PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Number of vertices: %ld",(long)num_vertices));
@@ -230,7 +235,19 @@ int main(int argc,char **argv)
     igraph_vector_init(&Jdetlist, 0);
 
     int diag = getHubbardDiag(i, configAlpha, sizeAlpha, configBeta, sizeBeta);
-    PetscCall(MatSetValue(A,i,i,(PetscReal)diag*U,INSERT_VALUES));
+    
+    if(hasV) {
+
+      double MElistV = 0.0;
+
+      double Udiag = diag*U;
+      getHubbardDiagVij(i, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph, &MElistV, vmatrix);
+      printf(" U=%10.5f MEV = %10.5f\n",Udiag,MElistV);
+      PetscCall(MatSetValue(A,i,i,(PetscReal)(Udiag + MElistV),INSERT_VALUES));
+    }
+    else{
+      PetscCall(MatSetValue(A,i,i,(PetscReal)diag*U,INSERT_VALUES));
+    }
     //matrix[i][i] = (PetscReal)diag*U;
     getAllHubbardMEs(i, &MElist, &Jdetlist, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph, wmatrix);
     for (int j = 0; j < igraph_vector_size(&Jdetlist); ++j) {
@@ -244,6 +261,7 @@ int main(int argc,char **argv)
 
     igraph_vector_destroy(&MElist);
     igraph_vector_destroy(&Jdetlist);
+
   }
   PetscCall(PetscTime(&tt2));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD," Time used to build the matrix: %f\n",tt2-tt1));

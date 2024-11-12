@@ -11,3 +11,5 @@ int getNumberOfConnectedVertices(const igraph_t* graph, igraph_integer_t vertex_
 void getConnectedVertices(const igraph_t* graph, igraph_integer_t vertex_id, igraph_vector_int_t* result) ;
 
 void getWeightMatrix(const igraph_t* graph, double** wmatrix, size_t hasW) ;
+
+void getRepulsionMatrix(const igraph_t* graph, double** wmatrix, size_t hasW) ;
