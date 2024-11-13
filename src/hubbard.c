@@ -212,6 +212,7 @@ void generateDeterminants(size_t* configAlpha, size_t sizeAlpha, const igraph_t*
 
                     // Add the position of the new alpha determinant to the list
                     igraph_vector_push_back(alphaMEs, phase*MEt);
+                    //printf(" MEt = %10.5f\n",MEt);
                 }
             }
 
@@ -384,11 +385,12 @@ void getHubbardDiagVij(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_
     size_t alphabeta   = alphaConfig | betaConfig;
 
     double MEv = 0.0;
+    alphaMEs[0] = 0.0;
 
     // Loop over each orbital
     for (size_t i = 0; i < norb; ++i) {
         // Check if the orbital is occupied
-        if ((alphabeta >> i) & 1) {
+        //if ((alphabeta >> i) & 1) {
             // Get the connected vertices
             igraph_vector_int_t orbital_id_allowed;
             igraph_vector_int_init(&orbital_id_allowed, 0);
@@ -401,7 +403,7 @@ void getHubbardDiagVij(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_
                 MEv = vmat[i][orbital_id];
 
                 // Check if the connected vertex is unoccupied
-                if ((alphabeta >> orbital_id) & 1) {
+                if (i < orbital_id) {
                     // Create a new alpha determinant by moving the electron
                     size_t ni = (( alphaConfig >> i) & 1) + ((betaConfig >> i) & 1);
                     size_t nj = (( alphaConfig >> orbital_id) & 1) + ((betaConfig >> orbital_id) & 1);
@@ -414,12 +416,12 @@ void getHubbardDiagVij(size_t Idet, size_t *configAlpha, size_t sizeAlpha, size_
 
                     // Add the position of the new alpha determinant to the list
                     alphaMEs[0] += MEv * (1.0-ni)*(1.0-nj);
-                    printf(" ME=%10.5f\n",alphaMEs[0]);
+                    //printf(" ME=%10.5f\n",alphaMEs[0]);
                 }
             }
 
             igraph_vector_int_destroy(&orbital_id_allowed);
-        }
+        //}
     }
 }
 

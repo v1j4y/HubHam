@@ -93,7 +93,7 @@ int main(int argc,char **argv)
   int nblk = 0;
   setSzBlockList(p, &nblk, SzBlock) ;
   for(size_t k=0;k<nblk;++k) NumBlock[k] = SzBlock[k];
-  printf(" doSz = %ld nblk=%d HASV=%ld ---- \n",DoSz, nblk,hasV);
+  //printf(" doSz = %ld nblk=%d HASV=%ld ---- \n",DoSz, nblk,hasV);
 
   igraph_t graph;
   igraph_set_attribute_table(&igraph_cattribute_table);
@@ -113,7 +113,7 @@ int main(int argc,char **argv)
 
   getWeightMatrix(&graph, wmatrix, (size_t)hasW);
   getRepulsionMatrix(&graph, vmatrix, (size_t)hasV);
-  print_matrix_d(vmatrix, wrows, wcols);
+  //print_matrix_d(vmatrix, wrows, wcols);
   //for (size_t i = 0; i < num_vertices; ++i) {
   //  igraph_vector_int_t orbital_id_allowed;
   //  igraph_vector_int_init(&orbital_id_allowed, 0);
@@ -242,10 +242,12 @@ int main(int argc,char **argv)
 
       double Udiag = diag*U;
       getHubbardDiagVij(i, configAlpha, sizeAlpha, configBeta, sizeBeta, &graph, &MElistV, vmatrix);
-      printf(" U=%10.5f MEV = %10.5f\n",Udiag,MElistV);
+      //printf(" %ld U=%10.5f MEV = %10.5f tot=%10.5f\n",i,Udiag,MElistV,Udiag+MElistV);
       PetscCall(MatSetValue(A,i,i,(PetscReal)(Udiag + MElistV),INSERT_VALUES));
     }
     else{
+      double Udiag = diag*U;
+      //printf(" %ld U=%10.5f  tot=%10.5f\n",i,Udiag,Udiag);
       PetscCall(MatSetValue(A,i,i,(PetscReal)diag*U,INSERT_VALUES));
     }
     //matrix[i][i] = (PetscReal)diag*U;
